@@ -1,0 +1,101 @@
+// Fonte de verdade do schema: docs/02-modelo-dominio.md
+// RawCapture fica fora deste schema por decisao da Fase 1 (so existe a partir da Fase 2 - WhatsApp).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VENDEDOR
+  COMPRADOR
+}
+
+enum ShortageStatus {
+  REGISTRADA
+  EM_COTACAO
+  COMPRADA
+  RECEBIDA
+  CANCELADA
+}
+
+enum ShortageOrigin {
+  WEB
+  WHATSAPP_AUDIO
+  WHATSAPP_TEXTO
+}
+
+model Store {
+  id              String   @id @default(uuid())
+  nome            String
+  segmento        String   @default("AUTOPECAS")
+  whatsappNumero  String?  @map("whatsapp_numero")
+  ativa           Boolean  @default(true)
+  criadaEm        DateTime @default(now()) @map("criada_em")
+  atualizadaEm    DateTime @updatedAt @map("atualizada_em")
+
+  users     User[]
+  shortages Shortage[]
+
+  @@map("stores")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  storeId           String   @map("store_id")
+  store             Store    @relation(fields: [storeId], references: [id])
+  nome              String
+  email             String
+  senhaHash         String   @map("senha_hash")
+  telefoneWhatsapp  String?  @unique @map("telefone_whatsapp")
+  papel             Role
+  ativo             Boolean  @default(true)
+  criadoEm          DateTime @default(now()) @map("criado_em")
+  atualizadoEm      DateTime @updatedAt @map("atualizado_em")
+
+  shortagesRegistradas Shortage[]         @relation("RegistradoPor")
+  transicoesExecutadas StatusTransition[] @relation("ExecutadaPor")
+
+  @@unique([storeId, email])
+  @@map("users")
+}
+
+model Shortage {
+  id              String         @id @default(uuid())
+  storeId         String         @map("store_id")
+  store           Store          @relation(fields: [storeId], references: [id])
+  codigoPeca      String?        @map("codigo_peca")
+  nomePeca        String         @map("nome_peca")
+  qtdRestante     Int            @map("qtd_restante")
+  observacao      String?
+  registradoPorId String         @map("registrado_por_id")
+  registradoPor   User           @relation("RegistradoPor", fields: [registradoPorId], references: [id])
+  origem          ShortageOrigin @default(WEB)
+  status          ShortageStatus @default(REGISTRADA)
+  criadaEm        DateTime       @default(now()) @map("criada_em")
+  atualizadaEm    DateTime       @updatedAt @map("atualizada_em")
+
+  transicoes StatusTransition[]
+
+  @@index([storeId, status])
+  @@map("shortages")
+}
+
+model StatusTransition {
+  id              String          @id @default(uuid())
+  shortageId      String          @map("shortage_id")
+  shortage        Shortage        @relation(fields: [shortageId], references: [id])
+  de              ShortageStatus?
+  para            ShortageStatus
+  executadaPorId  String          @map("executada_por_id")
+  executadaPor    User            @relation("ExecutadaPor", fields: [executadaPorId], references: [id])
+  motivo          String?
+  ocorridaEm      DateTime        @default(now()) @map("ocorrida_em")
+
+  @@map("status_transitions")
+}

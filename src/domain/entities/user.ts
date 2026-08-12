@@ -1,0 +1,89 @@
+import { Role } from './role';
+
+export interface UserProps {
+  id: string;
+  storeId: string;
+  nome: string;
+  email: string;
+  senhaHash: string;
+  telefoneWhatsapp: string | null;
+  papel: Role;
+  ativo: boolean;
+  criadoEm: Date;
+  atualizadoEm: Date;
+}
+
+export class User {
+  constructor(private readonly props: UserProps) {}
+
+  get id(): string {
+    return this.props.id;
+  }
+
+  get storeId(): string {
+    return this.props.storeId;
+  }
+
+  get nome(): string {
+    return this.props.nome;
+  }
+
+  get email(): string {
+    return this.props.email;
+  }
+
+  get senhaHash(): string {
+    return this.props.senhaHash;
+  }
+
+  get telefoneWhatsapp(): string | null {
+    return this.props.telefoneWhatsapp;
+  }
+
+  get papel(): Role {
+    return this.props.papel;
+  }
+
+  get ativo(): boolean {
+    return this.props.ativo;
+  }
+
+  get criadoEm(): Date {
+    return this.props.criadoEm;
+  }
+
+  get atualizadoEm(): Date {
+    return this.props.atualizadoEm;
+  }
+
+  isAdmin(): boolean {
+    return this.props.papel === Role.ADMIN;
+  }
+
+  isComprador(): boolean {
+    return this.props.papel === Role.COMPRADOR;
+  }
+
+  isVendedor(): boolean {
+    return this.props.papel === Role.VENDEDOR;
+  }
+
+  /** Admin e comprador podem gerenciar a fila completa; vendedor so as proprias faltas. */
+  podeGerenciarFilaCompleta(): boolean {
+    return this.isAdmin() || this.isComprador();
+  }
+
+  toPublic() {
+    return {
+      id: this.id,
+      storeId: this.storeId,
+      nome: this.nome,
+      email: this.email,
+      telefoneWhatsapp: this.telefoneWhatsapp,
+      papel: this.papel,
+      ativo: this.ativo,
+      criadoEm: this.criadoEm,
+      atualizadoEm: this.atualizadoEm,
+    };
+  }
+}

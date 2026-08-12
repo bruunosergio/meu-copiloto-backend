@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Prisma
+/generated/
+
+# Ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
