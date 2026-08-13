@@ -20,7 +20,8 @@ export interface ShortageRepository {
   findById(id: string): Promise<Shortage | null>;
   list(filters: ShortageFilters): Promise<Shortage[]>;
   create(data: CreateShortageData): Promise<Shortage>;
-  updateStatus(id: string, status: ShortageStatus): Promise<Shortage>;
+  updateStatus(id: string, status: ShortageStatus, distribuidoraId?: string | null): Promise<Shortage>;
+  setDistribuidora(id: string, distribuidoraId: string | null): Promise<Shortage>;
   recordTransition(data: {
     shortageId: string;
     de: ShortageStatus | null;

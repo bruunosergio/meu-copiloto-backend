@@ -23,6 +23,18 @@ export interface TransitionShortageInput {
   novoStatus: ShortageStatus;
   executadoPorId: string;
   motivo?: string;
+  /**
+   * Distribuidora vencedora da cotação. Opcional; só é aceita ao transicionar
+   * para COMPRADA (é o momento em que o pedido é feito ao fornecedor). Pode
+   * ficar em branco e ser preenchida depois via setDistribuidora().
+   */
+  distribuidoraId?: string;
+}
+
+export interface SetShortageDistribuidoraInput {
+  shortageId: string;
+  distribuidoraId: string | null;
+  executadoPorId: string;
 }
 
 export interface CancelShortageInput {
@@ -36,6 +48,7 @@ export interface ShortageUseCase {
   list(input: ListShortagesInput): Promise<Result<Shortage[], Failure>>;
   getById(id: string): Promise<Result<Shortage, Failure>>;
   transition(input: TransitionShortageInput): Promise<Result<Shortage, Failure>>;
+  setDistribuidora(input: SetShortageDistribuidoraInput): Promise<Result<Shortage, Failure>>;
   cancel(input: CancelShortageInput): Promise<Result<Shortage, Failure>>;
 }
 

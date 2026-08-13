@@ -11,16 +11,18 @@ import {
   CancelShortageInput,
   ListShortagesInput,
   RegisterShortageInput,
+  SetShortageDistribuidoraInput,
   ShortageUseCase,
   TransitionShortageInput,
 } from '../ports/input';
-import { ShortageRepository, UserRepository } from '../ports/output';
+import { DistribuidoraRepository, ShortageRepository, UserRepository } from '../ports/output';
 import { Role, Shortage, ShortageStatus } from '../entities';
 
 export class ShortageUseCaseImpl implements ShortageUseCase {
   constructor(
     private readonly shortageRepository: ShortageRepository,
     private readonly userRepository: UserRepository,
+    private readonly distribuidoraRepository: DistribuidoraRepository,
   ) {}
 
   async register(input: RegisterShortageInput): Promise<Result<Shortage, Failure>> {
@@ -113,7 +115,29 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         return Result.error(new InvalidTransitionFailure(shortage.status, input.novoStatus));
       }
 
-      const atualizada = await this.shortageRepository.updateStatus(shortage.id, input.novoStatus);
+      if (input.distribuidoraId) {
+        if (input.novoStatus !== ShortageStatus.COMPRADA) {
+          return Result.error(
+            new ValidationFailure(
+              'A distribuidora so pode ser definida ao marcar a falta como comprada.',
+            ),
+          );
+        }
+
+        const distribuidora = await this.distribuidoraRepository.findById(input.distribuidoraId);
+        if (!distribuidora || distribuidora.storeId !== shortage.storeId) {
+          return Result.error(new NotFoundFailure('Distribuidora', input.distribuidoraId));
+        }
+        if (!distribuidora.ativa) {
+          return Result.error(new ValidationFailure('Esta distribuidora esta inativa.'));
+        }
+      }
+
+      const atualizada = await this.shortageRepository.updateStatus(
+        shortage.id,
+        input.novoStatus,
+        input.distribuidoraId,
+      );
 
       await this.shortageRepository.recordTransition({
         shortageId: shortage.id,
@@ -123,6 +147,51 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         motivo: input.motivo ?? null,
       });
 
+      return Result.ok(atualizada);
+    } catch (error) {
+      return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  /**
+   * Define ou corrige a distribuidora vencedora fora do momento da transicao
+   * (ex.: comprador pulou a escolha ao marcar como comprada e quer preencher
+   * depois, ou precisa trocar por engano). Nao exige mudanca de status.
+   */
+  async setDistribuidora(
+    input: SetShortageDistribuidoraInput,
+  ): Promise<Result<Shortage, Failure>> {
+    try {
+      const shortage = await this.shortageRepository.findById(input.shortageId);
+      if (!shortage) {
+        return Result.error(new NotFoundFailure('Falta', input.shortageId));
+      }
+
+      const executor = await this.userRepository.findById(input.executadoPorId);
+      if (!executor) {
+        return Result.error(new UnauthorizedFailure());
+      }
+
+      if (!executor.podeGerenciarFilaCompleta()) {
+        return Result.error(
+          new UnauthorizedFailure('Apenas administradores e compradores podem definir a distribuidora.'),
+        );
+      }
+
+      if (input.distribuidoraId) {
+        const distribuidora = await this.distribuidoraRepository.findById(input.distribuidoraId);
+        if (!distribuidora || distribuidora.storeId !== shortage.storeId) {
+          return Result.error(new NotFoundFailure('Distribuidora', input.distribuidoraId));
+        }
+        if (!distribuidora.ativa) {
+          return Result.error(new ValidationFailure('Esta distribuidora esta inativa.'));
+        }
+      }
+
+      const atualizada = await this.shortageRepository.setDistribuidora(
+        shortage.id,
+        input.distribuidoraId,
+      );
       return Result.ok(atualizada);
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));

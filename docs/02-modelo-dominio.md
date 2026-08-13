@@ -8,7 +8,9 @@
 erDiagram
     LOJA ||--o{ USUARIO : possui
     LOJA ||--o{ FALTA : possui
+    LOJA ||--o{ DISTRIBUIDORA : possui
     USUARIO ||--o{ FALTA : registra
+    DISTRIBUIDORA ||--o{ FALTA : "venceu a cotacao de"
     FALTA ||--o| REGISTRO_BRUTO : "originada por"
     FALTA ||--o{ TRANSICAO_STATUS : "historico"
     USUARIO ||--o{ TRANSICAO_STATUS : executa
@@ -59,12 +61,27 @@ A entidade central do produto: um item que precisa ser reposto.
 | `qtd_restante` | inteiro >= 0 | quanto sobrou no estoque no momento do registro |
 | `observacao` | texto | opcional (ex.: "cliente encomendou 2") |
 | `registrado_por` | uuid (Usuário) | obrigatório |
+| `distribuidora_id` | uuid (Distribuidora) | opcional; ver regra na seção 3 |
 | `origem` | enum | `WHATSAPP_AUDIO`, `WHATSAPP_TEXTO`, `WEB` |
 | `status` | enum | ver ciclo de vida abaixo |
 | `registro_bruto_id` | uuid | nulo quando origem = WEB |
 | `criada_em` / `atualizada_em` | timestamp | — |
 
-### 2.4 Registro Bruto (`RawCapture`)
+### 2.4 Distribuidora (`Distribuidora`)
+
+Fornecedor cadastrado pela loja para cotação de peças. Cadastro simples e enxuto — não é uma entidade de "fornecedor completo" (sem CNPJ, contato, endereço); isso pode evoluir se o dashboard precisar.
+
+| Campo | Tipo | Regras |
+|---|---|---|
+| `id` | uuid | — |
+| `store_id` | uuid | obrigatório |
+| `nome` | texto | obrigatório; único por loja |
+| `ativa` | booleano | distribuidora inativa não aparece no seletor rápido, mas permanece vinculada ao histórico de faltas que já a usaram (nunca é excluída de fato) |
+| `criada_em` / `atualizada_em` | timestamp | — |
+
+Cadastro inicial (seed): LIGPECAS, DPK, KKI Autonorte, Real Moto Peças, Pellegrino, Roles, Sama, Isapa.
+
+### 2.5 Registro Bruto (`RawCapture`)
 
 Auditoria e matéria-prima para melhorar a interpretação. Guarda a mensagem exatamente como chegou.
 
@@ -82,7 +99,7 @@ Auditoria e matéria-prima para melhorar a interpretação. Guarda a mensagem ex
 
 A taxa `CONFIRMADO / total` é a métrica de precisão da interpretação (meta > 85% no piloto).
 
-### 2.5 Transição de Status (`StatusTransition`)
+### 2.6 Transição de Status (`StatusTransition`)
 
 Histórico imutável de mudanças de status da falta — alimenta o dashboard (tempo de ciclo, gargalos).
 
@@ -113,6 +130,7 @@ Regras:
 - Transições fora das setas acima são inválidas e devem ser rejeitadas pelo domínio (não pela UI).
 - Cancelamento exige observação com o motivo.
 - Toda transição gera um `StatusTransition`.
+- **Distribuidora vencedora**: ao transicionar `EM_COTACAO → COMPRADA` ("pedido feito ao fornecedor"), o comprador pode informar a distribuidora que venceu a cotação. É **opcional** no momento da transição (não bloqueia o fluxo se ele estiver com pressa) e pode ser preenchida/corrigida depois, sem exigir nova transição de status. Só é aceita nesse ponto do ciclo — não faz sentido escolher "quem venceu" enquanto a falta ainda está apenas `EM_COTACAO`. A distribuidora informada precisa pertencer à mesma loja e estar `ativa`.
 
 ## 4. Papéis e permissões
 
@@ -122,8 +140,12 @@ Regras:
 | Registrar falta (WhatsApp/web) | sim | sim | sim |
 | Ver fila de faltas completa | sim | somente as próprias | sim |
 | Transicionar status (cotação/compra/recebimento) | sim | não | sim |
+| Escolher/corrigir distribuidora vencedora | sim | não | sim |
 | Cancelar falta | sim | somente as próprias em REGISTRADA | sim |
 | CRUD de usuários | sim | não | não |
+| Cadastrar distribuidora | sim | não | não |
+| Desativar/reativar distribuidora | sim | não | não |
+| Listar distribuidoras | sim | sim | sim |
 | Configurações da loja | sim | não | não |
 | Dashboard estratégico | sim | não | visão operacional |
 

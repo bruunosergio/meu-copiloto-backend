@@ -33,9 +33,29 @@ async function main() {
     },
   });
 
+  const distribuidorasIniciais = [
+    'LIGPECAS',
+    'DPK',
+    'KKI Autonorte',
+    'Real Moto Pecas',
+    'Pellegrino',
+    'Roles',
+    'Sama',
+    'Isapa',
+  ];
+
+  for (const nome of distribuidorasIniciais) {
+    await prisma.distribuidora.upsert({
+      where: { storeId_nome: { storeId: store.id, nome } },
+      update: {},
+      create: { storeId: store.id, nome },
+    });
+  }
+
   console.log('Seed concluido:');
   console.log(`  Loja: ${store.nome} (${store.id})`);
   console.log(`  Admin: ${admin.email} / senha definida em SEED_ADMIN_SENHA`);
+  console.log(`  Distribuidoras: ${distribuidorasIniciais.length} cadastradas/verificadas`);
 }
 
 main()

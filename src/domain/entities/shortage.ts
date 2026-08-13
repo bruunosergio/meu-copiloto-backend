@@ -32,6 +32,7 @@ export interface ShortageProps {
   qtdRestante: number;
   observacao: string | null;
   registradoPorId: string;
+  distribuidoraId: string | null;
   origem: ShortageOrigin;
   status: ShortageStatus;
   criadaEm: Date;
@@ -67,6 +68,10 @@ export class Shortage {
 
   get registradoPorId(): string {
     return this.props.registradoPorId;
+  }
+
+  get distribuidoraId(): string | null {
+    return this.props.distribuidoraId;
   }
 
   get origem(): ShortageOrigin {

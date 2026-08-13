@@ -33,6 +33,7 @@ export class FakeShortageRepository implements ShortageRepository {
       qtdRestante: data.qtdRestante,
       observacao: data.observacao,
       registradoPorId: data.registradoPorId,
+      distribuidoraId: null,
       origem: data.origem,
       status: ShortageStatus.REGISTRADA,
       criadaEm: new Date(),
@@ -42,11 +43,29 @@ export class FakeShortageRepository implements ShortageRepository {
     return shortage;
   }
 
-  async updateStatus(id: string, status: ShortageStatus): Promise<Shortage> {
+  async updateStatus(
+    id: string,
+    status: ShortageStatus,
+    distribuidoraId?: string | null,
+  ): Promise<Shortage> {
     const index = this.shortages.findIndex((s) => s.id === id);
     if (index === -1) throw new Error('Falta nao encontrada no fake repository.');
     const atual = this.shortages[index].toSnapshot();
-    const atualizada = new Shortage({ ...atual, status, atualizadaEm: new Date() });
+    const atualizada = new Shortage({
+      ...atual,
+      status,
+      ...(distribuidoraId !== undefined && { distribuidoraId }),
+      atualizadaEm: new Date(),
+    });
+    this.shortages[index] = atualizada;
+    return atualizada;
+  }
+
+  async setDistribuidora(id: string, distribuidoraId: string | null): Promise<Shortage> {
+    const index = this.shortages.findIndex((s) => s.id === id);
+    if (index === -1) throw new Error('Falta nao encontrada no fake repository.');
+    const atual = this.shortages[index].toSnapshot();
+    const atualizada = new Shortage({ ...atual, distribuidoraId, atualizadaEm: new Date() });
     this.shortages[index] = atualizada;
     return atualizada;
   }

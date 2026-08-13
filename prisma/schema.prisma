@@ -39,8 +39,9 @@ model Store {
   criadaEm        DateTime @default(now()) @map("criada_em")
   atualizadaEm    DateTime @updatedAt @map("atualizada_em")
 
-  users     User[]
-  shortages Shortage[]
+  users          User[]
+  shortages      Shortage[]
+  distribuidoras Distribuidora[]
 
   @@map("stores")
 }
@@ -75,6 +76,8 @@ model Shortage {
   observacao      String?
   registradoPorId String         @map("registrado_por_id")
   registradoPor   User           @relation("RegistradoPor", fields: [registradoPorId], references: [id])
+  distribuidoraId String?        @map("distribuidora_id")
+  distribuidora   Distribuidora? @relation(fields: [distribuidoraId], references: [id])
   origem          ShortageOrigin @default(WEB)
   status          ShortageStatus @default(REGISTRADA)
   criadaEm        DateTime       @default(now()) @map("criada_em")
@@ -84,6 +87,21 @@ model Shortage {
 
   @@index([storeId, status])
   @@map("shortages")
+}
+
+model Distribuidora {
+  id           String   @id @default(uuid())
+  storeId      String   @map("store_id")
+  store        Store    @relation(fields: [storeId], references: [id])
+  nome         String
+  ativa        Boolean  @default(true)
+  criadaEm     DateTime @default(now()) @map("criada_em")
+  atualizadaEm DateTime @updatedAt @map("atualizada_em")
+
+  shortages Shortage[]
+
+  @@unique([storeId, nome])
+  @@map("distribuidoras")
 }
 
 model StatusTransition {

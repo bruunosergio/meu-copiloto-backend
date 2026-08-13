@@ -28,14 +28,14 @@ Entregas:
 - Painel web: login, administração de usuários, formulário de registro de falta, **tela de faltas do comprador** (filtros por status/data/vendedor, agrupamento, transição de status, ações em lote).
 - Deploy em ambiente acessível pela loja piloto.
 
-> **Status de implementação (2026-08-04):** backend (auth, CRUD de usuários, ciclo de vida das faltas) e painel web escritos por completo, seguindo a arquitetura hexagonal em ambas as camadas. O backend foi executado de fato pelo dono do produto: `npm run seed`, `npm run start:dev`, `npm test` (15 testes unitários, 3 suítes) e `npm run test:e2e` (6 testes e2e cobrindo login, criação de usuários, RBAC, registro de falta, fila filtrada por papel e ciclo de vida completo `REGISTRADA → EM_COTACAO → COMPRADA → RECEBIDA`) — todos passando contra um Postgres real via Docker Compose. Falta apenas a verificação manual do painel web (formulário do vendedor e fila do comprador na UI) e o uso real na loja piloto.
+> **Status de implementação (2026-08-12):** backend e painel web escritos e testados (unitários + e2e do backend, todos passando contra Postgres real). Deploy em produção concluído e acessível pela internet: backend no Render (`https://meu-copiloto-backend.onrender.com`), painel no Vercel (`https://meu-copiloto-web.vercel.app`), banco no Neon — ver ADR-0006. Fila do comprador redesenhada para lista em linhas com seções por status expansíveis/recolhíveis. Falta apenas o uso real e contínuo na loja piloto para fechar o último critério.
 
 Critérios de aceite:
 
 - [x] Admin cria usuário vendedor e comprador; cada papel enxerga só o que a matriz de permissões permite. _(verificado via suíte e2e do backend)_
-- [ ] Vendedor registra falta pelo formulário web em menos de 30 segundos. _(requer verificação manual na UI)_
+- [ ] Vendedor registra falta pelo formulário web em menos de 30 segundos. _(painel está em uso/teste em produção; falta cronometrar formalmente)_
 - [x] Comprador conduz uma falta por todo o ciclo de vida sem tocar no banco; transição inválida é rejeitada. _(verificado via suíte e2e do backend)_
-- [ ] Loja piloto operando: faltas reais da semana registradas no sistema. _(depende de uso real na loja)_
+- [ ] Loja piloto operando: faltas reais da semana registradas no sistema. _(depende de uso real e contínuo na loja — ainda em validação)_
 
 ## Fase 2 — WhatsApp + IA (o diferencial)
 

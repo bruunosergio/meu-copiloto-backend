@@ -44,10 +44,25 @@ export class PrismaShortageRepository implements ShortageRepository {
     return ShortageMapper.toDomain(raw);
   }
 
-  async updateStatus(id: string, status: ShortageStatus): Promise<Shortage> {
+  async updateStatus(
+    id: string,
+    status: ShortageStatus,
+    distribuidoraId?: string | null,
+  ): Promise<Shortage> {
     const raw = await this.prisma.shortage.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        ...(distribuidoraId !== undefined && { distribuidoraId }),
+      },
+    });
+    return ShortageMapper.toDomain(raw);
+  }
+
+  async setDistribuidora(id: string, distribuidoraId: string | null): Promise<Shortage> {
+    const raw = await this.prisma.shortage.update({
+      where: { id },
+      data: { distribuidoraId },
     });
     return ShortageMapper.toDomain(raw);
   }

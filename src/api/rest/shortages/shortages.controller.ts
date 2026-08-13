@@ -15,6 +15,7 @@ import { CurrentUser, JwtAuthGuard, RequestUser, RolesGuard } from '../../guards
 import { unwrapOrThrow } from '../result-http.helper';
 import { CancelShortageDto } from './cancel-shortage.dto';
 import { CreateShortageDto } from './create-shortage.dto';
+import { SetDistribuidoraDto } from './set-distribuidora.dto';
 import { TransitionShortageDto } from './transition-shortage.dto';
 
 @Controller('shortages')
@@ -78,6 +79,25 @@ export class ShortagesController {
       novoStatus: dto.novoStatus,
       executadoPorId: currentUser.sub,
       motivo: dto.motivo,
+      distribuidoraId: dto.distribuidoraId,
+    });
+    return this.toResponse(unwrapOrThrow(result));
+  }
+
+  /**
+   * Define/corrige a distribuidora vencedora fora do momento da transicao
+   * (ex.: comprador pulou a escolha e quer preencher depois).
+   */
+  @Patch(':id/distribuidora')
+  async setDistribuidora(
+    @Param('id') id: string,
+    @Body() dto: SetDistribuidoraDto,
+    @CurrentUser() currentUser: RequestUser,
+  ) {
+    const result = await this.shortageUseCase.setDistribuidora({
+      shortageId: id,
+      distribuidoraId: dto.distribuidoraId ?? null,
+      executadoPorId: currentUser.sub,
     });
     return this.toResponse(unwrapOrThrow(result));
   }

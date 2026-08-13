@@ -84,7 +84,7 @@ src/
 - `infra` implementa `ports/output` e não conhece `ports/input`.
 - Implementações concretas só são referenciadas dentro de `config/modules/`.
 - Ação nova em feature existente = método novo na interface existente, não interface nova.
-- Use cases e repositórios retornam `Result<T>` em vez de lançar exceção; exceções técnicas morrem na `infra`, traduzidas em `Failure`.
+- Use cases retornam `Result<T>` em vez de lançar exceção. Repositórios (`ports/output`) retornam `Promise<T>`/`Promise<T | null>` puro — não conhecem `Result`, que é um conceito do domínio de aplicação; erros técnicos (banco fora, etc.) sobem como exceção e são capturados pelo use case, que os traduz em `Failure` (ex.: `UnexpectedFailure`).
 
 ## 4. Fluxo do webhook (captura via WhatsApp)
 
@@ -126,7 +126,9 @@ Pontos de atenção de implementação:
 
 ## 6. Painel web (repositório separado)
 
-React + TypeScript com a mesma disciplina de camadas adaptada ao front (semelhante à divisão `ui`/`domain`/`infra` do INBORDAL mobile): componentes/páginas não chamam HTTP diretamente — consomem interfaces de caso de uso, com implementações HTTP injetadas no composition root. Detalhamento no README daquele repositório quando for criado (Fase 1).
+React + TypeScript com uma disciplina de camadas mais leve que a do backend — decisão consciente (2026-08-12), não a divisão `ui`/`domain`/`infra` completa do INBORDAL mobile com portas de caso de uso e injeção via composition root. Para o tamanho de um painel administrativo de uma loja piloto, isso seria over-engineering; a regra que de fato vale, e é a única inegociável ali, é: **componentes/páginas nunca chamam `axios` diretamente — sempre passam por `services/<recurso>.service.ts`**, que é a única camada que conhece a API HTTP. Isso isola qualquer mudança de contrato numa camada só, sem exigir interfaces/DI para um app deste porte. Detalhamento e estrutura de pastas no README do `meu-copiloto-web`.
+
+Se o produto crescer (mais integrações, múltiplos backends, necessidade real de trocar implementação), revisitar essa decisão com um ADR — aí sim migrando `services/` para portas de caso de uso injetáveis, no padrão hexagonal completo.
 
 ## 7. Decisões registradas
 

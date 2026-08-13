@@ -1,22 +1,50 @@
 import { ShortageUseCaseImpl } from './shortage.use-case.impl';
-import { FakeShortageRepository, FakeUserRepository } from './__fakes__';
-import { Role, ShortageOrigin, ShortageStatus, User } from '../entities';
-import { InvalidTransitionFailure, UnauthorizedFailure, ValidationFailure } from '../failures';
+import { FakeDistribuidoraRepository, FakeShortageRepository, FakeUserRepository } from './__fakes__';
+import { Distribuidora, Role, ShortageOrigin, ShortageStatus, User } from '../entities';
+import {
+  InvalidTransitionFailure,
+  NotFoundFailure,
+  UnauthorizedFailure,
+  ValidationFailure,
+} from '../failures';
 
 describe('ShortageUseCaseImpl', () => {
   const storeId = 'store-1';
   let shortageRepository: FakeShortageRepository;
   let userRepository: FakeUserRepository;
+  let distribuidoraRepository: FakeDistribuidoraRepository;
   let useCase: ShortageUseCaseImpl;
 
   let vendedor: User;
   let outroVendedor: User;
   let comprador: User;
+  let ligpecas: Distribuidora;
+  let distribuidoraInativa: Distribuidora;
 
   beforeEach(() => {
     shortageRepository = new FakeShortageRepository();
     userRepository = new FakeUserRepository();
-    useCase = new ShortageUseCaseImpl(shortageRepository, userRepository);
+    distribuidoraRepository = new FakeDistribuidoraRepository();
+    useCase = new ShortageUseCaseImpl(shortageRepository, userRepository, distribuidoraRepository);
+
+    ligpecas = new Distribuidora({
+      id: 'distribuidora-1',
+      storeId,
+      nome: 'LIGPECAS',
+      ativa: true,
+      criadaEm: new Date(),
+      atualizadaEm: new Date(),
+    });
+    distribuidoraInativa = new Distribuidora({
+      id: 'distribuidora-2',
+      storeId,
+      nome: 'DPK',
+      ativa: false,
+      criadaEm: new Date(),
+      atualizadaEm: new Date(),
+    });
+    distribuidoraRepository.seed(ligpecas);
+    distribuidoraRepository.seed(distribuidoraInativa);
 
     vendedor = new User({
       id: 'vendedor-1',
@@ -122,6 +150,161 @@ describe('ShortageUseCaseImpl', () => {
     });
     expect(recebida.isOk).toBe(true);
     expect(recebida.value.status).toBe(ShortageStatus.RECEBIDA);
+  });
+
+  it('comprador pode informar a distribuidora vencedora ao marcar como comprada', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca com fornecedor',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.EM_COTACAO,
+      executadoPorId: comprador.id,
+    });
+
+    const comprada = await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.COMPRADA,
+      executadoPorId: comprador.id,
+      distribuidoraId: ligpecas.id,
+    });
+
+    expect(comprada.isOk).toBe(true);
+    expect(comprada.value.distribuidoraId).toBe(ligpecas.id);
+  });
+
+  it('rejeita distribuidoraId informado fora da transicao para COMPRADA', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca com fornecedor invalido',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    const result = await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.EM_COTACAO,
+      executadoPorId: comprador.id,
+      distribuidoraId: ligpecas.id,
+    });
+
+    expect(result.isErr).toBe(true);
+    expect(result.error).toBeInstanceOf(ValidationFailure);
+  });
+
+  it('rejeita distribuidora inativa ao marcar como comprada', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca com fornecedor inativo',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+    await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.EM_COTACAO,
+      executadoPorId: comprador.id,
+    });
+
+    const result = await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.COMPRADA,
+      executadoPorId: comprador.id,
+      distribuidoraId: distribuidoraInativa.id,
+    });
+
+    expect(result.isErr).toBe(true);
+    expect(result.error).toBeInstanceOf(ValidationFailure);
+  });
+
+  it('permite marcar como comprada sem escolher distribuidora (opcional)', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca sem fornecedor ainda',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+    await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.EM_COTACAO,
+      executadoPorId: comprador.id,
+    });
+
+    const comprada = await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.COMPRADA,
+      executadoPorId: comprador.id,
+    });
+
+    expect(comprada.isOk).toBe(true);
+    expect(comprada.value.distribuidoraId).toBeNull();
+  });
+
+  it('setDistribuidora permite preencher/corrigir a distribuidora depois', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca para corrigir fornecedor',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+    await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.EM_COTACAO,
+      executadoPorId: comprador.id,
+    });
+    await useCase.transition({
+      shortageId: registrada.value.id,
+      novoStatus: ShortageStatus.COMPRADA,
+      executadoPorId: comprador.id,
+    });
+
+    const corrigida = await useCase.setDistribuidora({
+      shortageId: registrada.value.id,
+      distribuidoraId: ligpecas.id,
+      executadoPorId: comprador.id,
+    });
+
+    expect(corrigida.isOk).toBe(true);
+    expect(corrigida.value.distribuidoraId).toBe(ligpecas.id);
+  });
+
+  it('setDistribuidora rejeita distribuidora de outra loja/inexistente', async () => {
+    const registrada = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca com fornecedor fantasma',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    const result = await useCase.setDistribuidora({
+      shortageId: registrada.value.id,
+      distribuidoraId: 'distribuidora-inexistente',
+      executadoPorId: comprador.id,
+    });
+
+    expect(result.isErr).toBe(true);
+    expect(result.error).toBeInstanceOf(NotFoundFailure);
   });
 
   it('vendedor nao pode executar transicoes operacionais', async () => {

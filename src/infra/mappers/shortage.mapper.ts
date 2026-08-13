@@ -14,6 +14,7 @@ export class ShortageMapper {
       qtdRestante: raw.qtdRestante,
       observacao: raw.observacao,
       registradoPorId: raw.registradoPorId,
+      distribuidoraId: raw.distribuidoraId,
       origem: raw.origem as ShortageOrigin,
       status: raw.status as ShortageStatus,
       criadaEm: raw.criadaEm,

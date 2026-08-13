@@ -2,9 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../infra/database/prisma.module';
-import { PrismaShortageRepository, PrismaUserRepository } from '../../infra/repositories';
+import {
+  PrismaDistribuidoraRepository,
+  PrismaShortageRepository,
+  PrismaUserRepository,
+} from '../../infra/repositories';
 import { BcryptPasswordHasher, JwtTokenProvider } from '../../infra/security';
 import {
+  DISTRIBUIDORA_REPOSITORY,
   PASSWORD_HASHER,
   SHORTAGE_REPOSITORY,
   TOKEN_PROVIDER,
@@ -31,9 +36,16 @@ import {
   providers: [
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
     { provide: SHORTAGE_REPOSITORY, useClass: PrismaShortageRepository },
+    { provide: DISTRIBUIDORA_REPOSITORY, useClass: PrismaDistribuidoraRepository },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
   ],
-  exports: [USER_REPOSITORY, SHORTAGE_REPOSITORY, PASSWORD_HASHER, TOKEN_PROVIDER],
+  exports: [
+    USER_REPOSITORY,
+    SHORTAGE_REPOSITORY,
+    DISTRIBUIDORA_REPOSITORY,
+    PASSWORD_HASHER,
+    TOKEN_PROVIDER,
+  ],
 })
 export class InfraModule {}

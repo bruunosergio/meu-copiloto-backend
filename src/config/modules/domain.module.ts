@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { InfraModule } from './infra.module';
 import {
+  DISTRIBUIDORA_REPOSITORY,
+  DistribuidoraRepository,
   PASSWORD_HASHER,
   PasswordHasherPort,
   SHORTAGE_REPOSITORY,
@@ -10,9 +12,15 @@ import {
   USER_REPOSITORY,
   UserRepository,
 } from '../../domain/ports/output';
-import { AUTH_USE_CASE, SHORTAGE_USE_CASE, USER_MANAGEMENT_USE_CASE } from '../../domain/ports/input';
+import {
+  AUTH_USE_CASE,
+  DISTRIBUIDORA_USE_CASE,
+  SHORTAGE_USE_CASE,
+  USER_MANAGEMENT_USE_CASE,
+} from '../../domain/ports/input';
 import {
   AuthUseCaseImpl,
+  DistribuidoraUseCaseImpl,
   ShortageUseCaseImpl,
   UserManagementUseCaseImpl,
 } from '../../domain/usecases';
@@ -42,11 +50,20 @@ import {
     },
     {
       provide: SHORTAGE_USE_CASE,
-      useFactory: (shortageRepository: ShortageRepository, userRepository: UserRepository) =>
-        new ShortageUseCaseImpl(shortageRepository, userRepository),
-      inject: [SHORTAGE_REPOSITORY, USER_REPOSITORY],
+      useFactory: (
+        shortageRepository: ShortageRepository,
+        userRepository: UserRepository,
+        distribuidoraRepository: DistribuidoraRepository,
+      ) => new ShortageUseCaseImpl(shortageRepository, userRepository, distribuidoraRepository),
+      inject: [SHORTAGE_REPOSITORY, USER_REPOSITORY, DISTRIBUIDORA_REPOSITORY],
+    },
+    {
+      provide: DISTRIBUIDORA_USE_CASE,
+      useFactory: (distribuidoraRepository: DistribuidoraRepository) =>
+        new DistribuidoraUseCaseImpl(distribuidoraRepository),
+      inject: [DISTRIBUIDORA_REPOSITORY],
     },
   ],
-  exports: [AUTH_USE_CASE, USER_MANAGEMENT_USE_CASE, SHORTAGE_USE_CASE],
+  exports: [AUTH_USE_CASE, USER_MANAGEMENT_USE_CASE, SHORTAGE_USE_CASE, DISTRIBUIDORA_USE_CASE],
 })
 export class DomainModule {}

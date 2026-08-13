@@ -81,8 +81,13 @@ Todas as rotas abaixo (exceto `/auth/login`) exigem o header `Authorization: Bea
 | POST | `/shortages` | qualquer autenticado | Registra falta (`nomePeca`, `qtdRestante`, `codigoPeca?`, `observacao?`) |
 | GET | `/shortages?status=REGISTRADA,EM_COTACAO` | qualquer autenticado | Lista faltas — vendedor só vê as próprias; admin/comprador veem a fila completa |
 | GET | `/shortages/:id` | qualquer autenticado | Detalhe de uma falta |
-| PATCH | `/shortages/:id/status` | ADMIN/COMPRADOR | Transição operacional (`novoStatus`: `EM_COTACAO`\|`COMPRADA`\|`RECEBIDA`) |
+| PATCH | `/shortages/:id/status` | ADMIN/COMPRADOR | Transição operacional (`novoStatus`: `EM_COTACAO`\|`COMPRADA`\|`RECEBIDA`; `distribuidoraId?` só aceito ao ir para `COMPRADA`) |
+| PATCH | `/shortages/:id/distribuidora` | ADMIN/COMPRADOR | Define/corrige a distribuidora vencedora fora do momento da transição (`distribuidoraId` ou `null` para limpar) |
 | PATCH | `/shortages/:id/cancel` | ver regra | Cancela (`motivo` obrigatório) — admin/comprador sempre; vendedor só a própria falta em `REGISTRADA` |
+| GET | `/distribuidoras` | qualquer autenticado | Lista distribuidoras da loja (ativas e inativas) |
+| POST | `/distribuidoras` | ADMIN | Cadastra distribuidora (`nome`) |
+| PATCH | `/distribuidoras/:id/deactivate` | ADMIN | Desativa (some do seletor rápido, mantém histórico) |
+| PATCH | `/distribuidoras/:id/reactivate` | ADMIN | Reativa |
 
 ## Decisões técnicas da Fase 1 (complementam os ADRs)
 
