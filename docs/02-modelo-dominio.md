@@ -25,6 +25,8 @@ Raiz do isolamento de dados. **Toda** entidade carrega `store_id` desde o dia 1,
 | Campo | Tipo | Regras |
 |---|---|---|
 | `id` | uuid | — |
+| `codigo` | texto | único global; identificador de login do terminal da loja (ver 2.2) |
+| `senha_hash` | texto | nunca em texto puro; sem ela, o login do terminal fica indisponível |
 | `nome` | texto | obrigatório |
 | `segmento` | enum | `AUTOPECAS` no MVP; extensível (mercado, farmácia...) |
 | `whatsapp_numero` | texto | número da Cloud API vinculado à loja |
@@ -32,13 +34,17 @@ Raiz do isolamento de dados. **Toda** entidade carrega `store_id` desde o dia 1,
 
 ### 2.2 Usuário (`User`)
 
+Cada papel usa um conjunto de credenciais diferente (ver [ADR-0007](adr/0007-login-loja-e-pin-vendedor.md)): ADMIN/COMPRADOR logam com e-mail+senha, de qualquer lugar; VENDEDOR loga pela sessão do terminal da loja (código+senha) + escolha do próprio nome + PIN.
+
 | Campo | Tipo | Regras |
 |---|---|---|
 | `id` | uuid | — |
 | `store_id` | uuid | obrigatório |
 | `nome` | texto | obrigatório |
-| `email` | texto | único por loja; credencial de login do painel |
-| `senha_hash` | texto | nunca em texto puro (bcrypt/argon2) |
+| `email` | texto | único por loja; obrigatório para ADMIN/COMPRADOR, nulo para VENDEDOR |
+| `senha_hash` | texto | nunca em texto puro; obrigatório para ADMIN/COMPRADOR, nulo para VENDEDOR |
+| `usuario` | texto | único por loja; obrigatório para VENDEDOR (identificador curto exibido na lista do terminal), nulo para ADMIN/COMPRADOR |
+| `pin_hash` | texto | nunca em texto puro; obrigatório para VENDEDOR (4-6 dígitos), nulo para ADMIN/COMPRADOR |
 | `telefone_whatsapp` | texto | único global; identifica o autor da mensagem recebida no webhook |
 | `papel` | enum | `ADMIN`, `VENDEDOR`, `COMPRADOR` |
 | `ativo` | booleano | usuário inativo não loga nem registra falta |
@@ -47,6 +53,7 @@ Invariantes:
 
 - Mensagem recebida de telefone **não cadastrado ou inativo** é recusada com resposta educada — nunca cria falta.
 - Um usuário pode acumular papéis no futuro; no MVP, um papel por usuário é suficiente.
+- Um usuário nunca tem os dois conjuntos de credenciais ao mesmo tempo: e-mail/senha e usuário/PIN são mutuamente exclusivos, definidos pelo papel.
 
 ### 2.3 Falta (`Shortage`)
 
@@ -136,7 +143,7 @@ Regras:
 
 | Ação | ADMIN | VENDEDOR | COMPRADOR |
 |---|---|---|---|
-| Login no painel web | sim | sim | sim |
+| Login no painel web | e-mail+senha | terminal da loja + PIN | e-mail+senha |
 | Registrar falta (WhatsApp/web) | sim | sim | sim |
 | Ver fila de faltas completa | sim | somente as próprias | sim |
 | Transicionar status (cotação/compra/recebimento) | sim | não | sim |

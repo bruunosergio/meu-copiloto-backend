@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import { Role } from '../../../domain/entities';
 
 export class UpdateUserDto {
@@ -15,6 +15,18 @@ export class UpdateUserDto {
   @IsString()
   @MinLength(8, { message: 'A senha deve ter ao menos 8 caracteres.' })
   senha?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9._-]{3,20}$/, {
+    message: 'Usuario deve ter 3-20 caracteres: letras, numeros, ".", "_" ou "-".',
+  })
+  usuario?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4,6}$/, { message: 'PIN deve ter de 4 a 6 digitos numericos.' })
+  pin?: string;
 
   @IsOptional()
   @IsString()

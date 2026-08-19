@@ -49,6 +49,8 @@ export class UsersController {
       nome: dto.nome,
       email: dto.email,
       senha: dto.senha,
+      usuario: dto.usuario,
+      pin: dto.pin,
       telefoneWhatsapp: dto.telefoneWhatsapp ?? null,
       papel: dto.papel,
     });

@@ -1,5 +1,7 @@
 export interface StoreProps {
   id: string;
+  codigo: string;
+  senhaHash: string | null;
   nome: string;
   segmento: string;
   whatsappNumero: string | null;
@@ -13,6 +15,14 @@ export class Store {
 
   get id(): string {
     return this.props.id;
+  }
+
+  get codigo(): string {
+    return this.props.codigo;
+  }
+
+  get senhaHash(): string | null {
+    return this.props.senhaHash;
   }
 
   get nome(): string {
@@ -37,5 +47,10 @@ export class Store {
 
   get atualizadaEm(): Date {
     return this.props.atualizadaEm;
+  }
+
+  /** Sem senha configurada, o login do terminal da loja fica indisponivel. */
+  loginHabilitado(): boolean {
+    return this.ativa && !!this.senhaHash;
   }
 }

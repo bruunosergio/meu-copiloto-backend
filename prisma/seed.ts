@@ -5,15 +5,24 @@ const prisma = new PrismaClient();
 
 async function main() {
   const storeName = process.env.SEED_STORE_NAME ?? 'Loja Piloto';
+  const storeCodigo = process.env.SEED_STORE_CODIGO ?? 'loja-piloto';
+  const storeSenha = process.env.SEED_STORE_SENHA ?? 'TrocarSenhaLoja123!';
   const adminNome = process.env.SEED_ADMIN_NOME ?? 'Administrador';
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@lojapiloto.com';
   const adminSenha = process.env.SEED_ADMIN_SENHA ?? 'TrocarSenha123!';
 
+  const storeSenhaHash = await bcrypt.hash(storeSenha, 10);
+
+  // codigo/senhaHash sao atualizados a cada seed de proposito: sao dados de
+  // configuracao administrativa (nao dados de uso da loja), entao reaplicar
+  // o seed deve manter a senha do terminal sincronizada com SEED_STORE_SENHA.
   const store = await prisma.store.upsert({
     where: { id: 'loja-piloto' },
-    update: {},
+    update: { codigo: storeCodigo, senhaHash: storeSenhaHash },
     create: {
       id: 'loja-piloto',
+      codigo: storeCodigo,
+      senhaHash: storeSenhaHash,
       nome: storeName,
       segmento: 'AUTOPECAS',
     },
@@ -54,6 +63,7 @@ async function main() {
 
   console.log('Seed concluido:');
   console.log(`  Loja: ${store.nome} (${store.id})`);
+  console.log(`  Terminal da loja: codigo "${store.codigo}" / senha definida em SEED_STORE_SENHA`);
   console.log(`  Admin: ${admin.email} / senha definida em SEED_ADMIN_SENHA`);
   console.log(`  Distribuidoras: ${distribuidorasIniciais.length} cadastradas/verificadas`);
 }

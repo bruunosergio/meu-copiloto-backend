@@ -9,6 +9,8 @@ export class UserMapper {
       nome: raw.nome,
       email: raw.email,
       senhaHash: raw.senhaHash,
+      usuario: raw.usuario,
+      pinHash: raw.pinHash,
       telefoneWhatsapp: raw.telefoneWhatsapp,
       papel: raw.papel as User['papel'],
       ativo: raw.ativo,

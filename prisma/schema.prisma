@@ -32,6 +32,8 @@ enum ShortageOrigin {
 
 model Store {
   id              String   @id @default(uuid())
+  codigo          String   @unique
+  senhaHash       String?  @map("senha_hash")
   nome            String
   segmento        String   @default("AUTOPECAS")
   whatsappNumero  String?  @map("whatsapp_numero")
@@ -46,13 +48,21 @@ model Store {
   @@map("stores")
 }
 
+// ADMIN e COMPRADOR logam com email+senha (de qualquer lugar). VENDEDOR loga
+// atraves da sessao da loja (Store.codigo+senhaHash) + escolha do proprio nome
+// na lista + PIN curto (usuario+pinHash) - ver ADR-0007. Por isso email/senhaHash
+// sao opcionais aqui (nulos para VENDEDOR) e usuario/pinHash tambem sao opcionais
+// (nulos para ADMIN/COMPRADOR). A regra de qual conjunto e obrigatorio por papel
+// vive no dominio (UserManagementUseCaseImpl), nao no schema.
 model User {
   id                String   @id @default(uuid())
   storeId           String   @map("store_id")
   store             Store    @relation(fields: [storeId], references: [id])
   nome              String
-  email             String
-  senhaHash         String   @map("senha_hash")
+  email             String?
+  senhaHash         String?  @map("senha_hash")
+  usuario           String?
+  pinHash           String?  @map("pin_hash")
   telefoneWhatsapp  String?  @unique @map("telefone_whatsapp")
   papel             Role
   ativo             Boolean  @default(true)
@@ -63,6 +73,7 @@ model User {
   transicoesExecutadas StatusTransition[] @relation("ExecutadaPor")
 
   @@unique([storeId, email])
+  @@unique([storeId, usuario])
   @@map("users")
 }
 

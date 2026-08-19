@@ -24,6 +24,13 @@ export class PrismaUserRepository implements UserRepository {
     return raw ? UserMapper.toDomain(raw) : null;
   }
 
+  async findByUsuario(storeId: string, usuario: string): Promise<User | null> {
+    const raw = await this.prisma.user.findUnique({
+      where: { storeId_usuario: { storeId, usuario } },
+    });
+    return raw ? UserMapper.toDomain(raw) : null;
+  }
+
   async findByPhone(telefoneWhatsapp: string): Promise<User | null> {
     const raw = await this.prisma.user.findUnique({ where: { telefoneWhatsapp } });
     return raw ? UserMapper.toDomain(raw) : null;
@@ -44,6 +51,8 @@ export class PrismaUserRepository implements UserRepository {
         nome: data.nome,
         email: data.email,
         senhaHash: data.senhaHash,
+        usuario: data.usuario,
+        pinHash: data.pinHash,
         telefoneWhatsapp: data.telefoneWhatsapp,
         papel: data.papel,
       },
@@ -58,6 +67,8 @@ export class PrismaUserRepository implements UserRepository {
         ...(data.nome !== undefined && { nome: data.nome }),
         ...(data.email !== undefined && { email: data.email }),
         ...(data.senhaHash !== undefined && { senhaHash: data.senhaHash }),
+        ...(data.usuario !== undefined && { usuario: data.usuario }),
+        ...(data.pinHash !== undefined && { pinHash: data.pinHash }),
         ...(data.telefoneWhatsapp !== undefined && {
           telefoneWhatsapp: data.telefoneWhatsapp,
         }),

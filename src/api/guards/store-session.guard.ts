@@ -8,20 +8,23 @@ import {
 import { Request } from 'express';
 import { TOKEN_PROVIDER, TokenPort } from '../../domain/ports/output';
 
-export interface RequestUser {
-  sub: string;
+export interface StoreSession {
   storeId: string;
-  papel: string;
 }
 
 declare module 'express' {
   interface Request {
-    user?: RequestUser;
+    storeSession?: StoreSession;
   }
 }
 
+/**
+ * Guarda o token de sessao do terminal da loja (Store.codigo+senha).
+ * Usado apenas nas duas rotas do fluxo do vendedor (listar vendedores e
+ * confirmar o PIN) - ver ADR-0007. Nunca aceita um token de usuario comum.
+ */
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class StoreSessionGuard implements CanActivate {
   constructor(@Inject(TOKEN_PROVIDER) private readonly tokenProvider: TokenPort) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -29,23 +32,19 @@ export class JwtAuthGuard implements CanActivate {
     const token = this.extractToken(request);
 
     if (!token) {
-      throw new UnauthorizedException('Token de acesso ausente.');
+      throw new UnauthorizedException('Token da sessao da loja ausente.');
     }
 
     try {
       const payload = this.tokenProvider.verify(token);
-      if (payload.papel === 'LOJA') {
-        // Token de sessao do terminal: so serve para o fluxo de login do
-        // vendedor (StoreSessionGuard), nunca para rotas de negocio.
-        throw new UnauthorizedException(
-          'Este token pertence a sessao do terminal da loja, nao a um usuario.',
-        );
+      if (payload.papel !== 'LOJA') {
+        throw new UnauthorizedException('Este token nao pertence a uma sessao de loja.');
       }
-      request.user = payload as RequestUser;
+      request.storeSession = { storeId: payload.storeId };
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Token de acesso invalido ou expirado.');
+      throw new UnauthorizedException('Token da sessao da loja invalido ou expirado.');
     }
   }
 

@@ -4,8 +4,10 @@ export interface UserProps {
   id: string;
   storeId: string;
   nome: string;
-  email: string;
-  senhaHash: string;
+  email: string | null;
+  senhaHash: string | null;
+  usuario: string | null;
+  pinHash: string | null;
   telefoneWhatsapp: string | null;
   papel: Role;
   ativo: boolean;
@@ -28,12 +30,20 @@ export class User {
     return this.props.nome;
   }
 
-  get email(): string {
+  get email(): string | null {
     return this.props.email;
   }
 
-  get senhaHash(): string {
+  get senhaHash(): string | null {
     return this.props.senhaHash;
+  }
+
+  get usuario(): string | null {
+    return this.props.usuario;
+  }
+
+  get pinHash(): string | null {
+    return this.props.pinHash;
   }
 
   get telefoneWhatsapp(): string | null {
@@ -73,12 +83,21 @@ export class User {
     return this.isAdmin() || this.isComprador();
   }
 
+  /**
+   * ADMIN e COMPRADOR logam com e-mail+senha, de qualquer lugar.
+   * VENDEDOR loga pela sessao da loja + usuario+PIN (ver ADR-0007).
+   */
+  usaLoginPessoal(): boolean {
+    return !this.isVendedor();
+  }
+
   toPublic() {
     return {
       id: this.id,
       storeId: this.storeId,
       nome: this.nome,
       email: this.email,
+      usuario: this.usuario,
       telefoneWhatsapp: this.telefoneWhatsapp,
       papel: this.papel,
       ativo: this.ativo,

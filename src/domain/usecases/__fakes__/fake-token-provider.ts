@@ -1,7 +1,7 @@
-import { TokenPayload, TokenPort } from '../../ports/output';
+import { SignOptions, TokenPayload, TokenPort } from '../../ports/output';
 
 export class FakeTokenProvider implements TokenPort {
-  sign(payload: TokenPayload): string {
+  sign(payload: TokenPayload, _options?: SignOptions): string {
     return `token:${JSON.stringify(payload)}`;
   }
 

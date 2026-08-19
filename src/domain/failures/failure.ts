@@ -9,8 +9,8 @@ export class NotFoundFailure extends Failure {
 }
 
 export class InvalidCredentialsFailure extends Failure {
-  constructor() {
-    super('E-mail ou senha invalidos.');
+  constructor(message = 'E-mail ou senha invalidos.') {
+    super(message);
   }
 }
 

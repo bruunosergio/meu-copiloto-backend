@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { InfraModule } from './infra.module';
 import {
   DISTRIBUIDORA_REPOSITORY,
@@ -7,6 +8,8 @@ import {
   PasswordHasherPort,
   SHORTAGE_REPOSITORY,
   ShortageRepository,
+  STORE_REPOSITORY,
+  StoreRepository,
   TOKEN_PROVIDER,
   TokenPort,
   USER_REPOSITORY,
@@ -31,16 +34,22 @@ import {
  * essas classes manualmente via useFactory, injetando as portas de saida.
  */
 @Module({
-  imports: [InfraModule],
+  imports: [InfraModule, ConfigModule],
   providers: [
     {
       provide: AUTH_USE_CASE,
       useFactory: (
         userRepository: UserRepository,
+        storeRepository: StoreRepository,
         passwordHasher: PasswordHasherPort,
         tokenProvider: TokenPort,
-      ) => new AuthUseCaseImpl(userRepository, passwordHasher, tokenProvider),
-      inject: [USER_REPOSITORY, PASSWORD_HASHER, TOKEN_PROVIDER],
+        config: ConfigService,
+      ) =>
+        new AuthUseCaseImpl(userRepository, storeRepository, passwordHasher, tokenProvider, {
+          storeTokenExpiresIn: config.get<string>('JWT_EXPIRES_IN_LOJA', '12h'),
+          vendedorTokenExpiresIn: config.get<string>('JWT_EXPIRES_IN_VENDEDOR', '20m'),
+        }),
+      inject: [USER_REPOSITORY, STORE_REPOSITORY, PASSWORD_HASHER, TOKEN_PROVIDER, ConfigService],
     },
     {
       provide: USER_MANAGEMENT_USE_CASE,

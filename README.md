@@ -52,7 +52,7 @@ npm run seed
 npm run start:dev
 ```
 
-O servidor sobe em `http://localhost:3000` (configurável via `PORT`). Login inicial: o e-mail e a senha definidos em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_SENHA` no `.env` (troque a senha padrão antes de usar fora do seu ambiente local).
+O servidor sobe em `http://localhost:3000` (configurável via `PORT`). Login do admin: o e-mail e a senha definidos em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_SENHA` no `.env`. Terminal da loja (tela do vendedor): código e senha definidos em `SEED_STORE_CODIGO` / `SEED_STORE_SENHA` (troque as senhas padrão antes de usar fora do seu ambiente local).
 
 ### Scripts úteis
 
@@ -70,14 +70,22 @@ O servidor sobe em `http://localhost:3000` (configurável via `PORT`). Login ini
 
 ## Endpoints da Fase 1
 
-Todas as rotas abaixo (exceto `/auth/login`) exigem o header `Authorization: Bearer <token>`.
+Todas as rotas abaixo (exceto `/health` e `/auth/*`) exigem o header `Authorization: Bearer <token>`.
+
+Autenticação tem dois fluxos por papel — ver [ADR-0007](docs/adr/0007-login-loja-e-pin-vendedor.md):
+
+| Método | Rota | Token exigido | Descrição |
+|---|---|---|---|
+| GET | `/health` | — | Disponibilidade (alvo do keep-alive e de monitoramento externo) |
+| POST | `/auth/login` | — | ADMIN/COMPRADOR: `{ email, senha }` → `{ token, user }` |
+| POST | `/auth/loja/login` | — | Vendedor, passo 1: `{ codigo, senha }` da loja → `{ storeToken, store }` |
+| GET | `/auth/loja/vendedores` | storeToken | Vendedor, passo 2: lista `{ id, nome }` dos vendedores ativos |
+| POST | `/auth/loja/vendedor-login` | storeToken | Vendedor, passo 3: `{ userId, pin }` → `{ token, user }` |
 
 | Método | Rota | Papel exigido | Descrição |
 |---|---|---|---|
-| GET | `/health` | — | Disponibilidade (alvo do keep-alive e de monitoramento externo) |
-| POST | `/auth/login` | — | `{ email, senha }` → `{ token, user }` |
 | GET | `/users` | ADMIN | Lista usuários da loja |
-| POST | `/users` | ADMIN | Cria usuário (`nome`, `email`, `senha`, `papel`, `telefoneWhatsapp?`) |
+| POST | `/users` | ADMIN | Cria usuário — ADMIN/COMPRADOR: `{ nome, email, senha, papel, telefoneWhatsapp? }`; VENDEDOR: `{ nome, usuario, pin, papel, telefoneWhatsapp? }` |
 | PATCH | `/users/:id` | ADMIN | Atualiza dados/papel/ativo |
 | PATCH | `/users/:id/deactivate` | ADMIN | Desativa usuário |
 | POST | `/shortages` | qualquer autenticado | Registra falta (`nomePeca`, `qtdRestante`, `codigoPeca?`, `observacao?`) |
@@ -93,7 +101,7 @@ Todas as rotas abaixo (exceto `/auth/login`) exigem o header `Authorization: Bea
 
 ## Decisões técnicas da Fase 1 (complementam os ADRs)
 
-- **JWT sem refresh token por ora** — proporcional ao tamanho do MVP (uma loja, poucos usuários). Token de acesso único com expiração configurável (`JWT_EXPIRES_IN`, padrão 8h — a duração de um turno). Reavaliar se o produto crescer.
+- **JWT sem refresh token por ora** — proporcional ao tamanho do MVP (uma loja, poucos usuários). Token de acesso único com expiração configurável (`JWT_EXPIRES_IN`, padrão 8h — a duração de um turno). Vendedor usa tokens separados e mais curtos (`JWT_EXPIRES_IN_LOJA`/`JWT_EXPIRES_IN_VENDEDOR` — ver ADR-0007). Reavaliar se o produto crescer.
 - **`bcryptjs`** em vez de `bcrypt` — evita compilação nativa no Windows.
 - **Uma loja semeada por script** — não há tela de CRUD de lojas ainda (isso é Fase 4); o `storeId` já existe em todas as tabelas.
 - **`RawCapture` fora do schema** — só entra no banco a partir da Fase 2, quando o WhatsApp existir de fato.

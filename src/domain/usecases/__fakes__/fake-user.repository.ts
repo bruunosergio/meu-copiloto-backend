@@ -17,6 +17,10 @@ export class FakeUserRepository implements UserRepository {
     return this.users.find((u) => u.storeId === storeId && u.email === email) ?? null;
   }
 
+  async findByUsuario(storeId: string, usuario: string): Promise<User | null> {
+    return this.users.find((u) => u.storeId === storeId && u.usuario === usuario) ?? null;
+  }
+
   async findByPhone(telefoneWhatsapp: string): Promise<User | null> {
     return this.users.find((u) => u.telefoneWhatsapp === telefoneWhatsapp) ?? null;
   }
@@ -26,12 +30,16 @@ export class FakeUserRepository implements UserRepository {
   }
 
   async create(data: CreateUserData): Promise<User> {
+    // Prefixo distinto de ids usados via seed() (ex.: 'user-1') para nao colidir
+    // quando um teste mistura usuarios semeados manualmente com criados via create().
     const user = new User({
-      id: `user-${this.nextId++}`,
+      id: `user-auto-${this.nextId++}`,
       storeId: data.storeId,
       nome: data.nome,
       email: data.email,
       senhaHash: data.senhaHash,
+      usuario: data.usuario,
+      pinHash: data.pinHash,
       telefoneWhatsapp: data.telefoneWhatsapp,
       papel: data.papel,
       ativo: true,
@@ -50,8 +58,10 @@ export class FakeUserRepository implements UserRepository {
       id: atual.id,
       storeId: atual.storeId,
       nome: data.nome ?? atual.nome,
-      email: data.email ?? atual.email,
-      senhaHash: data.senhaHash ?? atual.senhaHash,
+      email: data.email !== undefined ? data.email : atual.email,
+      senhaHash: data.senhaHash !== undefined ? data.senhaHash : atual.senhaHash,
+      usuario: data.usuario !== undefined ? data.usuario : atual.usuario,
+      pinHash: data.pinHash !== undefined ? data.pinHash : atual.pinHash,
       telefoneWhatsapp:
         data.telefoneWhatsapp !== undefined ? data.telefoneWhatsapp : atual.telefoneWhatsapp,
       papel: data.papel ?? atual.papel,

@@ -19,6 +19,9 @@ import { Role } from '../src/domain/entities';
  * removidos individualmente no afterAll - nunca apagamos a loja nem o admin
  * criado pelo seed.
  *
+ * O vendedor loga pelo fluxo do terminal da loja (codigo+senha -> escolhe o
+ * nome -> PIN), nao por e-mail+senha - ver ADR-0007.
+ *
  * Requer DATABASE_URL apontando para um Postgres com as migrations e o seed
  * aplicados (o mesmo do `docker compose up` + `npm run seed` do README serve).
  */
@@ -27,9 +30,9 @@ describe('Fluxo de faltas (e2e)', () => {
   let prisma: PrismaService;
 
   const sufixo = Date.now();
-  const vendedorEmail = `vendedor.e2e.${sufixo}@teste.com`;
+  const vendedorUsuario = `vendedor.e2e.${sufixo}`;
   const compradorEmail = `comprador.e2e.${sufixo}@teste.com`;
-  const vendedorSenha = 'VendedorSenha123!';
+  const vendedorPin = '4321';
   const compradorSenha = 'CompradorSenha123!';
 
   let vendedorId: string;
@@ -76,7 +79,7 @@ describe('Fluxo de faltas (e2e)', () => {
     const vendedorResponse = await request(app.getHttpServer())
       .post('/users')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ nome: 'Vendedor E2E', email: vendedorEmail, senha: vendedorSenha, papel: Role.VENDEDOR })
+      .send({ nome: 'Vendedor E2E', usuario: vendedorUsuario, pin: vendedorPin, papel: Role.VENDEDOR })
       .expect(201);
     vendedorId = vendedorResponse.body.id;
 
@@ -97,13 +100,31 @@ describe('Fluxo de faltas (e2e)', () => {
     await app.close();
   });
 
-  it('vendedor e comprador conseguem logar', async () => {
+  it('vendedor loga pelo terminal da loja (codigo+senha -> escolhe o nome -> PIN)', async () => {
+    const storeCodigo = process.env.SEED_STORE_CODIGO ?? 'loja-piloto';
+    const storeSenha = process.env.SEED_STORE_SENHA ?? 'TrocarSenhaLoja123!';
+
+    const storeLogin = await request(app.getHttpServer())
+      .post('/auth/loja/login')
+      .send({ codigo: storeCodigo, senha: storeSenha })
+      .expect(200);
+    const storeToken: string = storeLogin.body.storeToken;
+
+    const vendedores = await request(app.getHttpServer())
+      .get('/auth/loja/vendedores')
+      .set('Authorization', `Bearer ${storeToken}`)
+      .expect(200);
+    expect(vendedores.body.some((v: { id: string }) => v.id === vendedorId)).toBe(true);
+
     const vendedorLogin = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: vendedorEmail, senha: vendedorSenha })
+      .post('/auth/loja/vendedor-login')
+      .set('Authorization', `Bearer ${storeToken}`)
+      .send({ userId: vendedorId, pin: vendedorPin })
       .expect(200);
     vendedorToken = vendedorLogin.body.token;
+  });
 
+  it('comprador loga com e-mail+senha', async () => {
     const compradorLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: compradorEmail, senha: compradorSenha })

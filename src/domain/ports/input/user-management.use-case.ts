@@ -5,16 +5,22 @@ import { Role, User } from '../../entities';
 export interface CreateUserInput {
   storeId: string;
   nome: string;
-  email: string;
-  senha: string;
-  telefoneWhatsapp: string | null;
   papel: Role;
+  /** ADMIN/COMPRADOR (obrigatorios para esses papeis). */
+  email?: string;
+  senha?: string;
+  /** VENDEDOR (obrigatorios para esse papel). */
+  usuario?: string;
+  pin?: string;
+  telefoneWhatsapp: string | null;
 }
 
 export interface UpdateUserInput {
   nome?: string;
   email?: string;
   senha?: string;
+  usuario?: string;
+  pin?: string;
   telefoneWhatsapp?: string | null;
   papel?: Role;
   ativo?: boolean;
