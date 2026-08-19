@@ -18,7 +18,7 @@ Dois fluxos de autenticação independentes, por papel:
 - **VENDEDOR:** fluxo de terminal em três passos:
   1. `POST /auth/loja/login` — código+senha da loja (definidos pelo administrador) abrem uma **sessão do terminal**, válida por um turno inteiro (`JWT_EXPIRES_IN_LOJA`, padrão 12h).
   2. `GET /auth/loja/vendedores` — com a sessão do terminal, lista os vendedores ativos da loja (nome, sem credenciais) para exibição em grade.
-  3. `POST /auth/loja/vendedor-login` — o vendedor escolhe o próprio nome e confirma com um **PIN de 4 a 6 dígitos**; recebe um token de usuário comum (mesmo formato do login pessoal), mas com expiração curta (`JWT_EXPIRES_IN_VENDEDOR`, padrão 20min — teto de segurança; o painel devolve à lista de nomes após ~5min de inatividade ou logo após registrar 1 falta, o que vier primeiro).
+  3. `POST /auth/loja/vendedor-login` — o vendedor escolhe o próprio nome e confirma com um **PIN de 4 a 6 dígitos**; recebe um token de usuário comum (mesmo formato do login pessoal), mas com expiração curta (`JWT_EXPIRES_IN_VENDEDOR`, padrão 20min — teto de segurança; o painel devolve à lista de nomes após 2min de inatividade, para permitir registrar várias faltas seguidas no mesmo atendimento sem escolher o nome de novo a cada uma).
 
 Mudanças de modelo:
 
