@@ -29,6 +29,6 @@ Hospedar cada peça no serviço gratuito mais adequado a ela, todos com deploy a
 ## Consequências
 
 - Positiva: custo zero, deploy automático a cada `git push`, HTTPS de fábrica nos três serviços.
-- Negativa: o free tier do Render "dorme" o backend após ~15 minutos sem tráfego; a primeira requisição depois disso leva ~30-50s (cold start). Mitigável com um ping externo gratuito (ex.: cron-job.org) nos horários de funcionamento da loja, se isso incomodar no uso real.
+- Negativa: o free tier do Render "dorme" o backend após ~15 minutos sem tráfego; a primeira requisição depois disso leva ~30-50s (cold start). **Mitigado (2026-08-18):** ping automático no `GET /health` a cada 10 minutos no horário comercial (seg–sáb), via GitHub Actions — ver `.github/workflows/keep-alive.yml`.
 - Negativa: o free tier do Neon também suspende o banco após inatividade, mas o "wake up" na primeira conexão é rápido (poucos segundos) e não chega a ser perceptível somado ao cold start do Render.
 - Esta decisão é explicitamente temporária: quando o piloto validar adoção e/ou entrar a Fase 4 (multi-loja), revisitar com um novo ADR — provavelmente migrando para infra paga com SLA (Railway pago, Render pago, ou um VPS dedicado).

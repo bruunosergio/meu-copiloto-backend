@@ -1,0 +1,24 @@
+# Evita o cold start do free tier do Render (dorme apos ~15 min ocioso).
+# Pinga o GET /health a cada 10 minutos no horario comercial da loja piloto.
+# Ver ADR-0006 e docs/05-estrategia-multi-loja.md.
+#
+# Observacoes:
+# - O cron do GitHub Actions usa UTC. Brasilia = UTC-3, entao 10-21 UTC
+#   cobre ~07:00-18:50 no horario da loja, segunda a sabado.
+# - O agendamento pode atrasar alguns minutos em horarios de pico do GitHub;
+#   como o Render so dorme apos 15 min, o intervalo de 10 min tem folga.
+# - O GitHub desativa crons automaticamente se o repositorio ficar 60 dias
+#   sem atividade; um commit qualquer reativa.
+name: keep-alive
+
+on:
+  schedule:
+    - cron: '*/10 10-21 * * 1-6'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping no backend (Render)
+        run: curl -fsS --max-time 90 --retry 3 --retry-delay 10 https://meu-copiloto-backend.onrender.com/health

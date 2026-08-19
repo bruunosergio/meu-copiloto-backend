@@ -12,6 +12,7 @@ Assistente digital de reposição de estoque para varejo (primeiro segmento: aut
 | [docs/02-modelo-dominio.md](docs/02-modelo-dominio.md) | Entidades, invariantes, ciclo de vida da falta e matriz de permissões |
 | [docs/03-arquitetura.md](docs/03-arquitetura.md) | Arquitetura hexagonal, estrutura de pastas, fluxo do webhook, regras invioláveis |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | Fases 0–4 com entregas e critérios de aceite |
+| [docs/05-estrategia-multi-loja.md](docs/05-estrategia-multi-loja.md) | Como escalar de 1 loja para N: multi-tenant, hospedagem e o que fazer antes da 2ª loja |
 | [docs/adr/](docs/adr/README.md) | Decisões de arquitetura registradas (ADRs) |
 
 ## Stack
@@ -73,6 +74,7 @@ Todas as rotas abaixo (exceto `/auth/login`) exigem o header `Authorization: Bea
 
 | Método | Rota | Papel exigido | Descrição |
 |---|---|---|---|
+| GET | `/health` | — | Disponibilidade (alvo do keep-alive e de monitoramento externo) |
 | POST | `/auth/login` | — | `{ email, senha }` → `{ token, user }` |
 | GET | `/users` | ADMIN | Lista usuários da loja |
 | POST | `/users` | ADMIN | Cria usuário (`nome`, `email`, `senha`, `papel`, `telefoneWhatsapp?`) |
