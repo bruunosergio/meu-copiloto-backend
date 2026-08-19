@@ -109,6 +109,37 @@ describe('ShortageUseCaseImpl', () => {
     expect(result.value.status).toBe(ShortageStatus.REGISTRADA);
   });
 
+  it('normaliza codigo e nome da peca para maiusculas', async () => {
+    const result = await useCase.register({
+      storeId,
+      codigoPeca: '  fr-5548  ',
+      nomePeca: '  filtro de óleo fram ph5548  ',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    expect(result.isOk).toBe(true);
+    expect(result.value.codigoPeca).toBe('FR-5548');
+    expect(result.value.nomePeca).toBe('FILTRO DE ÓLEO FRAM PH5548');
+  });
+
+  it('trata codigo da peca em branco como nao informado', async () => {
+    const result = await useCase.register({
+      storeId,
+      codigoPeca: '   ',
+      nomePeca: 'Peca sem codigo',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    expect(result.isOk).toBe(true);
+    expect(result.value.codigoPeca).toBeNull();
+  });
+
   it('rejeita quantidade restante negativa', async () => {
     const result = await useCase.register({
       storeId,

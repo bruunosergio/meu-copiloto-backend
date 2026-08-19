@@ -34,10 +34,17 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         return Result.error(new ValidationFailure('O nome da peca e obrigatorio.'));
       }
 
+      // Codigo/nome sempre em maiusculas: evita duplicidade por capitalizacao
+      // diferente (ex.: "fr-5548" x "FR-5548") e casa com a convencao de
+      // codigo de peca de autopecas. Aplicado aqui (dominio) para valer
+      // tambem na entrada futura por WhatsApp/IA, nao so no formulario web.
+      const codigoPeca = input.codigoPeca?.trim() ? input.codigoPeca.trim().toUpperCase() : null;
+      const nomePeca = input.nomePeca.trim().toUpperCase();
+
       const shortage = await this.shortageRepository.create({
         storeId: input.storeId,
-        codigoPeca: input.codigoPeca,
-        nomePeca: input.nomePeca,
+        codigoPeca,
+        nomePeca,
         qtdRestante: input.qtdRestante,
         observacao: input.observacao,
         registradoPorId: input.registradoPorId,
