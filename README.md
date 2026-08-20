@@ -77,7 +77,7 @@ Autenticação tem dois fluxos por papel — ver [ADR-0007](docs/adr/0007-login-
 | Método | Rota | Token exigido | Descrição |
 |---|---|---|---|
 | GET | `/health` | — | Disponibilidade (alvo do keep-alive e de monitoramento externo) |
-| POST | `/auth/login` | — | ADMIN/COMPRADOR: `{ email, senha }` → `{ token, user }` |
+| POST | `/auth/login` | — | ADMIN/COMPRADOR/GERENTE: `{ email, senha }` → `{ token, user }` |
 | POST | `/auth/loja/login` | — | Vendedor, passo 1: `{ codigo, senha }` da loja → `{ storeToken, store }` |
 | GET | `/auth/loja/vendedores` | storeToken | Vendedor, passo 2: lista `{ id, nome }` dos vendedores ativos |
 | POST | `/auth/loja/vendedor-login` | storeToken | Vendedor, passo 3: `{ userId, pin }` → `{ token, user }` |
@@ -85,15 +85,20 @@ Autenticação tem dois fluxos por papel — ver [ADR-0007](docs/adr/0007-login-
 | Método | Rota | Papel exigido | Descrição |
 |---|---|---|---|
 | GET | `/users` | ADMIN | Lista usuários da loja |
-| POST | `/users` | ADMIN | Cria usuário — ADMIN/COMPRADOR: `{ nome, email, senha, papel, telefoneWhatsapp? }`; VENDEDOR: `{ nome, usuario, pin, papel, telefoneWhatsapp? }` |
+| POST | `/users` | ADMIN | Cria usuário — ADMIN/COMPRADOR/GERENTE: `{ nome, email, senha, papel, telefoneWhatsapp? }`; VENDEDOR: `{ nome, usuario, pin, papel, telefoneWhatsapp? }` |
 | PATCH | `/users/:id` | ADMIN | Atualiza dados/papel/ativo |
 | PATCH | `/users/:id/deactivate` | ADMIN | Desativa usuário |
-| POST | `/shortages` | qualquer autenticado | Registra falta (`nomePeca`, `qtdRestante`, `codigoPeca?`, `observacao?`) |
-| GET | `/shortages?status=REGISTRADA,EM_COTACAO` | qualquer autenticado | Lista faltas — vendedor só vê as próprias; admin/comprador veem a fila completa |
+| POST | `/shortages` | qualquer autenticado | Registra falta (`nomePeca`, `qtdRestante`, `codigoPeca?`, `observacao?`, `emprestada?`, `emprestadaDe?`) |
+| GET | `/shortages?status=REGISTRADA,CONCLUIDA` | qualquer autenticado | Lista faltas — vendedor só vê as próprias; admin/comprador/gerente veem a fila completa |
 | GET | `/shortages/:id` | qualquer autenticado | Detalhe de uma falta |
-| PATCH | `/shortages/:id/status` | ADMIN/COMPRADOR | Transição operacional (`novoStatus`: `EM_COTACAO`\|`COMPRADA`\|`RECEBIDA`; `distribuidoraId?` só aceito ao ir para `COMPRADA`) |
-| PATCH | `/shortages/:id/distribuidora` | ADMIN/COMPRADOR | Define/corrige a distribuidora vencedora fora do momento da transição (`distribuidoraId` ou `null` para limpar) |
-| PATCH | `/shortages/:id/cancel` | ver regra | Cancela (`motivo` obrigatório) — admin/comprador sempre; vendedor só a própria falta em `REGISTRADA` |
+| PATCH | `/shortages/:id/status` | ADMIN/COMPRADOR/GERENTE | Transição operacional (`novoStatus`: `CONCLUIDA`\|`RECEBIDA`; `distribuidoraId?` só aceito ao ir para `CONCLUIDA`) |
+| PATCH | `/shortages/status` | ADMIN/COMPRADOR/GERENTE | Transição em lote (`ids`, `novoStatus`, `distribuidoraId?`) — tudo-ou-nada |
+| PATCH | `/shortages/:id/distribuidora` | ADMIN/COMPRADOR/GERENTE | Define/corrige a distribuidora vencedora fora do momento da transição (`distribuidoraId` ou `null` para limpar) |
+| PATCH | `/shortages/:id/cancel` | ver regra | Cancela (`motivo` obrigatório) — admin/comprador/gerente sempre; vendedor só a própria falta em `REGISTRADA` |
+| GET | `/emprestimos?status=PENDENTE` | qualquer autenticado | Lista empréstimos da loja |
+| PATCH | `/emprestimos/devolver` | qualquer autenticado | Marca empréstimos como devolvidos (`ids`, `devolvidoPara`) |
+| GET/POST | `/tarefas`, `/tarefas/sprints` | ADMIN/GERENTE | Quadro de tarefas e sprints |
+| PATCH/DELETE | `/tarefas/:id`, `/tarefas/sprints/:id/encerrar` | ADMIN/GERENTE | Atualiza/exclui tarefa; encerra sprint |
 | GET | `/distribuidoras` | qualquer autenticado | Lista distribuidoras da loja (ativas e inativas) |
 | POST | `/distribuidoras` | ADMIN | Cadastra distribuidora (`nome`) |
 | PATCH | `/distribuidoras/:id/deactivate` | ADMIN | Desativa (some do seletor rápido, mantém histórico) |

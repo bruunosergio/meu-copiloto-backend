@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateShortageDto {
   @IsOptional()
@@ -16,4 +16,13 @@ export class CreateShortageDto {
   @IsOptional()
   @IsString()
   observacao?: string;
+
+  /** Peca emprestada de loja parceira: entra na lista de emprestimos. */
+  @IsOptional()
+  @IsBoolean()
+  emprestada?: boolean;
+
+  @IsOptional()
+  @IsString()
+  emprestadaDe?: string;
 }

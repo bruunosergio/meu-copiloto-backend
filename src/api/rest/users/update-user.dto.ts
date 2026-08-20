@@ -33,7 +33,7 @@ export class UpdateUserDto {
   telefoneWhatsapp?: string | null;
 
   @IsOptional()
-  @IsEnum(Role, { message: 'Papel invalido. Use ADMIN, VENDEDOR ou COMPRADOR.' })
+  @IsEnum(Role, { message: 'Papel invalido. Use ADMIN, VENDEDOR, COMPRADOR ou GERENTE.' })
   papel?: Role;
 
   @IsOptional()

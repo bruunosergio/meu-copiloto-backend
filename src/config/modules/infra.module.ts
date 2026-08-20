@@ -4,16 +4,20 @@ import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../infra/database/prisma.module';
 import {
   PrismaDistribuidoraRepository,
+  PrismaEmprestimoRepository,
   PrismaShortageRepository,
   PrismaStoreRepository,
+  PrismaTarefaRepository,
   PrismaUserRepository,
 } from '../../infra/repositories';
 import { BcryptPasswordHasher, JwtTokenProvider } from '../../infra/security';
 import {
   DISTRIBUIDORA_REPOSITORY,
+  EMPRESTIMO_REPOSITORY,
   PASSWORD_HASHER,
   SHORTAGE_REPOSITORY,
   STORE_REPOSITORY,
+  TAREFA_REPOSITORY,
   TOKEN_PROVIDER,
   USER_REPOSITORY,
 } from '../../domain/ports/output';
@@ -40,6 +44,8 @@ import {
     { provide: STORE_REPOSITORY, useClass: PrismaStoreRepository },
     { provide: SHORTAGE_REPOSITORY, useClass: PrismaShortageRepository },
     { provide: DISTRIBUIDORA_REPOSITORY, useClass: PrismaDistribuidoraRepository },
+    { provide: EMPRESTIMO_REPOSITORY, useClass: PrismaEmprestimoRepository },
+    { provide: TAREFA_REPOSITORY, useClass: PrismaTarefaRepository },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasher },
     { provide: TOKEN_PROVIDER, useClass: JwtTokenProvider },
   ],
@@ -48,6 +54,8 @@ import {
     STORE_REPOSITORY,
     SHORTAGE_REPOSITORY,
     DISTRIBUIDORA_REPOSITORY,
+    EMPRESTIMO_REPOSITORY,
+    TAREFA_REPOSITORY,
     PASSWORD_HASHER,
     TOKEN_PROVIDER,
   ],

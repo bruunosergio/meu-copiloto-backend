@@ -14,14 +14,27 @@ enum Role {
   ADMIN
   VENDEDOR
   COMPRADOR
+  GERENTE
 }
 
+// Ciclo simplificado (ADR-0008): a etapa de cotacao foi eliminada porque na
+// pratica ela dura minutos. CONCLUIDA = pedido feito na distribuidora vencedora.
 enum ShortageStatus {
   REGISTRADA
-  EM_COTACAO
-  COMPRADA
+  CONCLUIDA
   RECEBIDA
   CANCELADA
+}
+
+enum EmprestimoStatus {
+  PENDENTE
+  DEVOLVIDA
+}
+
+enum TarefaStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  CONCLUIDA
 }
 
 enum ShortageOrigin {
@@ -44,6 +57,9 @@ model Store {
   users          User[]
   shortages      Shortage[]
   distribuidoras Distribuidora[]
+  emprestimos    Emprestimo[]
+  sprints        Sprint[]
+  tarefas        Tarefa[]
 
   @@map("stores")
 }
@@ -69,8 +85,12 @@ model User {
   criadoEm          DateTime @default(now()) @map("criado_em")
   atualizadoEm      DateTime @updatedAt @map("atualizado_em")
 
-  shortagesRegistradas Shortage[]         @relation("RegistradoPor")
-  transicoesExecutadas StatusTransition[] @relation("ExecutadaPor")
+  shortagesRegistradas  Shortage[]         @relation("RegistradoPor")
+  transicoesExecutadas  StatusTransition[] @relation("ExecutadaPor")
+  emprestimosRegistrados Emprestimo[]      @relation("EmprestimoRegistradoPor")
+  emprestimosDevolvidos  Emprestimo[]      @relation("EmprestimoDevolvidoPor")
+  sprintsCriadas         Sprint[]          @relation("SprintCriadoPor")
+  tarefasCriadas         Tarefa[]          @relation("TarefaCriadoPor")
 
   @@unique([storeId, email])
   @@unique([storeId, usuario])
@@ -95,6 +115,7 @@ model Shortage {
   atualizadaEm    DateTime       @updatedAt @map("atualizada_em")
 
   transicoes StatusTransition[]
+  emprestimo Emprestimo?
 
   @@index([storeId, status])
   @@map("shortages")
@@ -113,6 +134,69 @@ model Distribuidora {
 
   @@unique([storeId, nome])
   @@map("distribuidoras")
+}
+
+// Peca emprestada de loja parceira enquanto o pedido de reposicao nao chega.
+// Nasce junto com a falta (checkbox no registro) e sai da lista ativa ao ser
+// devolvida, guardando quem marcou, a quem foi devolvida e quando.
+model Emprestimo {
+  id              String           @id @default(uuid())
+  storeId         String           @map("store_id")
+  store           Store            @relation(fields: [storeId], references: [id])
+  shortageId      String           @unique @map("shortage_id")
+  shortage        Shortage         @relation(fields: [shortageId], references: [id])
+  emprestadaDe    String?          @map("emprestada_de")
+  status          EmprestimoStatus @default(PENDENTE)
+  registradoPorId String           @map("registrado_por_id")
+  registradoPor   User             @relation("EmprestimoRegistradoPor", fields: [registradoPorId], references: [id])
+  devolvidoPorId  String?          @map("devolvido_por_id")
+  devolvidoPor    User?            @relation("EmprestimoDevolvidoPor", fields: [devolvidoPorId], references: [id])
+  devolvidoPara   String?          @map("devolvido_para")
+  devolvidoEm     DateTime?        @map("devolvido_em")
+  criadoEm        DateTime         @default(now()) @map("criado_em")
+  atualizadoEm    DateTime         @updatedAt @map("atualizado_em")
+
+  @@index([storeId, status])
+  @@map("emprestimos")
+}
+
+// Quadro de tarefas do GERENTE/ADMIN (kanban com sprints opcionais).
+model Sprint {
+  id           String    @id @default(uuid())
+  storeId      String    @map("store_id")
+  store        Store     @relation(fields: [storeId], references: [id])
+  nome         String
+  inicio       DateTime?
+  fim          DateTime?
+  encerrada    Boolean   @default(false)
+  criadoPorId  String    @map("criado_por_id")
+  criadoPor    User      @relation("SprintCriadoPor", fields: [criadoPorId], references: [id])
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  tarefas Tarefa[]
+
+  @@map("sprints")
+}
+
+model Tarefa {
+  id           String       @id @default(uuid())
+  storeId      String       @map("store_id")
+  store        Store        @relation(fields: [storeId], references: [id])
+  sprintId     String?      @map("sprint_id")
+  sprint       Sprint?      @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  titulo       String
+  descricao    String?
+  status       TarefaStatus @default(A_FAZER)
+  prazo        DateTime?
+  criadoPorId  String       @map("criado_por_id")
+  criadoPor    User         @relation("TarefaCriadoPor", fields: [criadoPorId], references: [id])
+  concluidaEm  DateTime?    @map("concluida_em")
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em")
+
+  @@index([storeId, sprintId])
+  @@map("tarefas")
 }
 
 model StatusTransition {

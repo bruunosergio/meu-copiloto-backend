@@ -5,7 +5,7 @@ import {
 import { Shortage, ShortageOrigin, ShortageStatus, StatusTransition } from '../../domain/entities';
 
 export class ShortageMapper {
-  static toDomain(raw: PrismaShortage): Shortage {
+  static toDomain(raw: PrismaShortage & { registradoPor?: { nome: string } }): Shortage {
     return new Shortage({
       id: raw.id,
       storeId: raw.storeId,
@@ -14,6 +14,7 @@ export class ShortageMapper {
       qtdRestante: raw.qtdRestante,
       observacao: raw.observacao,
       registradoPorId: raw.registradoPorId,
+      registradoPorNome: raw.registradoPor?.nome ?? null,
       distribuidoraId: raw.distribuidoraId,
       origem: raw.origem as ShortageOrigin,
       status: raw.status as ShortageStatus,

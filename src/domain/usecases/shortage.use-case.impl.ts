@@ -13,9 +13,15 @@ import {
   RegisterShortageInput,
   SetShortageDistribuidoraInput,
   ShortageUseCase,
+  TransitionManyShortagesInput,
   TransitionShortageInput,
 } from '../ports/input';
-import { DistribuidoraRepository, ShortageRepository, UserRepository } from '../ports/output';
+import {
+  DistribuidoraRepository,
+  EmprestimoRepository,
+  ShortageRepository,
+  UserRepository,
+} from '../ports/output';
 import { Role, Shortage, ShortageStatus } from '../entities';
 
 export class ShortageUseCaseImpl implements ShortageUseCase {
@@ -23,6 +29,7 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
     private readonly shortageRepository: ShortageRepository,
     private readonly userRepository: UserRepository,
     private readonly distribuidoraRepository: DistribuidoraRepository,
+    private readonly emprestimoRepository: EmprestimoRepository,
   ) {}
 
   async register(input: RegisterShortageInput): Promise<Result<Shortage, Failure>> {
@@ -59,6 +66,17 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         motivo: null,
       });
 
+      // Peca emprestada de parceiro: entra na lista de emprestimos junto com
+      // a falta, para o controle de devolucao (ver docs/02-modelo-dominio.md).
+      if (input.emprestada) {
+        await this.emprestimoRepository.create({
+          storeId: input.storeId,
+          shortageId: shortage.id,
+          emprestadaDe: input.emprestadaDe?.trim() ? input.emprestadaDe.trim() : null,
+          registradoPorId: input.registradoPorId,
+        });
+      }
+
       return Result.ok(shortage);
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));
@@ -91,7 +109,7 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
   }
 
   /**
-   * Transicoes operacionais (cotacao, compra, recebimento).
+   * Transicoes operacionais (conclusao da compra, recebimento).
    * Cancelamento tem regras proprias — ver cancel().
    */
   async transition(input: TransitionShortageInput): Promise<Result<Shortage, Failure>> {
@@ -114,7 +132,7 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
 
       if (!executor.podeGerenciarFilaCompleta()) {
         return Result.error(
-          new UnauthorizedFailure('Apenas administradores e compradores podem conduzir a cotacao e a compra.'),
+          new UnauthorizedFailure('Apenas administradores, compradores e gerentes podem conduzir a compra.'),
         );
       }
 
@@ -123,10 +141,10 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
       }
 
       if (input.distribuidoraId) {
-        if (input.novoStatus !== ShortageStatus.COMPRADA) {
+        if (input.novoStatus !== ShortageStatus.CONCLUIDA) {
           return Result.error(
             new ValidationFailure(
-              'A distribuidora so pode ser definida ao marcar a falta como comprada.',
+              'A distribuidora so pode ser definida ao marcar a falta como concluida.',
             ),
           );
         }
@@ -161,8 +179,89 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
   }
 
   /**
+   * Transicao em lote: um pedido em uma distribuidora costuma cobrir varias
+   * pecas de uma vez. Valida todas as faltas antes de aplicar qualquer
+   * mudanca — se uma falhar na validacao, nada e alterado.
+   */
+  async transitionMany(input: TransitionManyShortagesInput): Promise<Result<Shortage[], Failure>> {
+    try {
+      if (input.shortageIds.length === 0) {
+        return Result.error(new ValidationFailure('Selecione ao menos uma falta.'));
+      }
+      if (input.novoStatus === ShortageStatus.CANCELADA) {
+        return Result.error(
+          new ValidationFailure('Use a operacao de cancelamento para mover faltas para CANCELADA.'),
+        );
+      }
+
+      const executor = await this.userRepository.findById(input.executadoPorId);
+      if (!executor) {
+        return Result.error(new UnauthorizedFailure());
+      }
+      if (!executor.podeGerenciarFilaCompleta()) {
+        return Result.error(
+          new UnauthorizedFailure('Apenas administradores, compradores e gerentes podem conduzir a compra.'),
+        );
+      }
+
+      const shortages: Shortage[] = [];
+      for (const shortageId of input.shortageIds) {
+        const shortage = await this.shortageRepository.findById(shortageId);
+        if (!shortage) {
+          return Result.error(new NotFoundFailure('Falta', shortageId));
+        }
+        if (shortage.storeId !== executor.storeId) {
+          return Result.error(new NotFoundFailure('Falta', shortageId));
+        }
+        if (!shortage.podeTransicionarPara(input.novoStatus)) {
+          return Result.error(new InvalidTransitionFailure(shortage.status, input.novoStatus));
+        }
+        shortages.push(shortage);
+      }
+
+      if (input.distribuidoraId) {
+        if (input.novoStatus !== ShortageStatus.CONCLUIDA) {
+          return Result.error(
+            new ValidationFailure(
+              'A distribuidora so pode ser definida ao marcar as faltas como concluidas.',
+            ),
+          );
+        }
+        const distribuidora = await this.distribuidoraRepository.findById(input.distribuidoraId);
+        if (!distribuidora || distribuidora.storeId !== executor.storeId) {
+          return Result.error(new NotFoundFailure('Distribuidora', input.distribuidoraId));
+        }
+        if (!distribuidora.ativa) {
+          return Result.error(new ValidationFailure('Esta distribuidora esta inativa.'));
+        }
+      }
+
+      const atualizadas: Shortage[] = [];
+      for (const shortage of shortages) {
+        const atualizada = await this.shortageRepository.updateStatus(
+          shortage.id,
+          input.novoStatus,
+          input.distribuidoraId,
+        );
+        await this.shortageRepository.recordTransition({
+          shortageId: shortage.id,
+          de: shortage.status,
+          para: input.novoStatus,
+          executadaPorId: input.executadoPorId,
+          motivo: input.motivo ?? null,
+        });
+        atualizadas.push(atualizada);
+      }
+
+      return Result.ok(atualizadas);
+    } catch (error) {
+      return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  /**
    * Define ou corrige a distribuidora vencedora fora do momento da transicao
-   * (ex.: comprador pulou a escolha ao marcar como comprada e quer preencher
+   * (ex.: comprador pulou a escolha ao marcar como concluida e quer preencher
    * depois, ou precisa trocar por engano). Nao exige mudanca de status.
    */
   async setDistribuidora(
@@ -181,7 +280,7 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
 
       if (!executor.podeGerenciarFilaCompleta()) {
         return Result.error(
-          new UnauthorizedFailure('Apenas administradores e compradores podem definir a distribuidora.'),
+          new UnauthorizedFailure('Apenas administradores, compradores e gerentes podem definir a distribuidora.'),
         );
       }
 

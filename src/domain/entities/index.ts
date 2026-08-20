@@ -4,3 +4,6 @@ export * from './user';
 export * from './shortage';
 export * from './status-transition';
 export * from './distribuidora';
+export * from './emprestimo';
+export * from './sprint';
+export * from './tarefa';

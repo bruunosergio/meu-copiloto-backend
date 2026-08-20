@@ -92,6 +92,9 @@ describe('Fluxo de faltas (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.emprestimo.deleteMany({
+      where: { shortage: { registradoPorId: { in: [vendedorId] } } },
+    });
     await prisma.statusTransition.deleteMany({
       where: { shortage: { registradoPorId: { in: [vendedorId] } } },
     });
@@ -161,17 +164,21 @@ describe('Fluxo de faltas (e2e)', () => {
     ).toBe(true);
   });
 
-  it('comprador conduz a falta por todo o ciclo de vida', async () => {
-    await request(app.getHttpServer())
-      .patch(`/shortages/${shortageId}/status`)
+  it('fila expoe o nome de quem registrou a falta', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/shortages')
       .set('Authorization', `Bearer ${compradorToken}`)
-      .send({ novoStatus: 'EM_COTACAO' })
       .expect(200);
 
+    const falta = response.body.find((s: { id: string }) => s.id === shortageId);
+    expect(falta.registradoPorNome).toBe('Vendedor E2E');
+  });
+
+  it('comprador conduz a falta por todo o ciclo de vida (REGISTRADA -> CONCLUIDA -> RECEBIDA)', async () => {
     await request(app.getHttpServer())
       .patch(`/shortages/${shortageId}/status`)
       .set('Authorization', `Bearer ${compradorToken}`)
-      .send({ novoStatus: 'COMPRADA' })
+      .send({ novoStatus: 'CONCLUIDA' })
       .expect(200);
 
     const recebida = await request(app.getHttpServer())
@@ -187,11 +194,11 @@ describe('Fluxo de faltas (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/shortages/${shortageId}/status`)
       .set('Authorization', `Bearer ${compradorToken}`)
-      .send({ novoStatus: 'EM_COTACAO' })
+      .send({ novoStatus: 'CONCLUIDA' })
       .expect(400);
   });
 
-  it('vendedor nao consegue transicionar status (apenas admin/comprador podem)', async () => {
+  it('vendedor nao consegue transicionar status (apenas admin/comprador/gerente podem)', async () => {
     const outraFalta = await request(app.getHttpServer())
       .post('/shortages')
       .set('Authorization', `Bearer ${vendedorToken}`)
@@ -202,7 +209,65 @@ describe('Fluxo de faltas (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/shortages/${outraFaltaId}/status`)
       .set('Authorization', `Bearer ${vendedorToken}`)
-      .send({ novoStatus: 'EM_COTACAO' })
+      .send({ novoStatus: 'CONCLUIDA' })
       .expect(403);
+  });
+
+  it('comprador conclui varias faltas em lote', async () => {
+    const faltaA = await request(app.getHttpServer())
+      .post('/shortages')
+      .set('Authorization', `Bearer ${vendedorToken}`)
+      .send({ nomePeca: 'Peca lote A', qtdRestante: 0 })
+      .expect(201);
+    const faltaB = await request(app.getHttpServer())
+      .post('/shortages')
+      .set('Authorization', `Bearer ${vendedorToken}`)
+      .send({ nomePeca: 'Peca lote B', qtdRestante: 0 })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch('/shortages/status')
+      .set('Authorization', `Bearer ${compradorToken}`)
+      .send({ ids: [faltaA.body.id, faltaB.body.id], novoStatus: 'CONCLUIDA' })
+      .expect(200);
+
+    expect(response.body).toHaveLength(2);
+    expect(response.body.every((s: { status: string }) => s.status === 'CONCLUIDA')).toBe(true);
+  });
+
+  it('falta emprestada entra na lista de emprestimos e pode ser devolvida em lote', async () => {
+    const emprestada = await request(app.getHttpServer())
+      .post('/shortages')
+      .set('Authorization', `Bearer ${vendedorToken}`)
+      .send({
+        nomePeca: 'Peca emprestada e2e',
+        qtdRestante: 0,
+        emprestada: true,
+        emprestadaDe: 'Loja Parceira',
+      })
+      .expect(201);
+
+    const pendentes = await request(app.getHttpServer())
+      .get('/emprestimos?status=PENDENTE')
+      .set('Authorization', `Bearer ${vendedorToken}`)
+      .expect(200);
+
+    const emprestimo = pendentes.body.find(
+      (e: { shortageId: string }) => e.shortageId === emprestada.body.id,
+    );
+    expect(emprestimo).toBeDefined();
+    expect(emprestimo.emprestadaDe).toBe('Loja Parceira');
+    expect(emprestimo.pecaNome).toBe('PECA EMPRESTADA E2E');
+
+    const devolvidos = await request(app.getHttpServer())
+      .patch('/emprestimos/devolver')
+      .set('Authorization', `Bearer ${vendedorToken}`)
+      .send({ ids: [emprestimo.id], devolvidoPara: 'Joao da Loja Parceira' })
+      .expect(200);
+
+    expect(devolvidos.body[0].status).toBe('DEVOLVIDA');
+    expect(devolvidos.body[0].devolvidoPara).toBe('Joao da Loja Parceira');
+    expect(devolvidos.body[0].devolvidoPorNome).toBe('Vendedor E2E');
+    expect(devolvidos.body[0].devolvidoEm).not.toBeNull();
   });
 });

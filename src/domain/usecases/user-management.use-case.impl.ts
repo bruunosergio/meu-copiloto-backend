@@ -165,7 +165,7 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
   }
 
   /**
-   * ADMIN/COMPRADOR exigem e-mail+senha; VENDEDOR exige usuario+PIN (ver ADR-0007).
+   * ADMIN/COMPRADOR/GERENTE exigem e-mail+senha; VENDEDOR exige usuario+PIN (ver ADR-0007).
    * Cada papel usa exclusivamente o proprio conjunto de credenciais.
    */
   private validarCredenciaisPorPapel(
@@ -185,7 +185,7 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
     }
 
     if (!input.email) {
-      return new ValidationFailure('E-mail e obrigatorio para ADMIN/COMPRADOR.');
+      return new ValidationFailure('E-mail e obrigatorio para ADMIN, COMPRADOR e GERENTE.');
     }
     if (!input.senha || input.senha.length < 8) {
       return new ValidationFailure('Senha deve ter ao menos 8 caracteres.');

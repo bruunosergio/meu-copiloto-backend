@@ -78,13 +78,22 @@ export class User {
     return this.props.papel === Role.VENDEDOR;
   }
 
-  /** Admin e comprador podem gerenciar a fila completa; vendedor so as proprias faltas. */
+  isGerente(): boolean {
+    return this.props.papel === Role.GERENTE;
+  }
+
+  /** Admin, comprador e gerente podem gerenciar a fila completa; vendedor so as proprias faltas. */
   podeGerenciarFilaCompleta(): boolean {
-    return this.isAdmin() || this.isComprador();
+    return this.isAdmin() || this.isComprador() || this.isGerente();
+  }
+
+  /** Quadro de tarefas e restrito a gerente e admin. */
+  podeGerenciarTarefas(): boolean {
+    return this.isAdmin() || this.isGerente();
   }
 
   /**
-   * ADMIN e COMPRADOR logam com e-mail+senha, de qualquer lugar.
+   * ADMIN, COMPRADOR e GERENTE logam com e-mail+senha, de qualquer lugar.
    * VENDEDOR loga pela sessao da loja + usuario+PIN (ver ADR-0007).
    */
   usaLoginPessoal(): boolean {

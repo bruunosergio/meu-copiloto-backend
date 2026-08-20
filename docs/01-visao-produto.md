@@ -66,7 +66,7 @@ O MVP valida o produto em **uma única loja** (piloto). O modelo de dados já na
 
 - **Adoção:** % das faltas registradas pelo sistema vs. caderno (meta: caderno abandonado em 4 semanas).
 - **Precisão da interpretação:** % de registros confirmados sem correção (meta inicial: > 85%).
-- **Tempo de ciclo:** tempo médio entre REGISTRADA e COMPRADA, comparado ao processo anterior.
+- **Tempo de ciclo:** tempo médio entre REGISTRADA e CONCLUIDA, comparado ao processo anterior.
 - **Recorrência detectada:** itens identificados como falta recorrente que geraram ajuste de estoque mínimo.
 
 ## 7. Documentos relacionados

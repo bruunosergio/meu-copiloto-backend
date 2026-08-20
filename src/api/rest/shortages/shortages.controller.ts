@@ -13,6 +13,7 @@ import { Role, Shortage, ShortageOrigin, ShortageStatus } from '../../../domain/
 import { SHORTAGE_USE_CASE, ShortageUseCase } from '../../../domain/ports/input';
 import { CurrentUser, JwtAuthGuard, RequestUser, RolesGuard } from '../../guards';
 import { unwrapOrThrow } from '../result-http.helper';
+import { BatchTransitionDto } from './batch-transition.dto';
 import { CancelShortageDto } from './cancel-shortage.dto';
 import { CreateShortageDto } from './create-shortage.dto';
 import { SetDistribuidoraDto } from './set-distribuidora.dto';
@@ -33,6 +34,8 @@ export class ShortagesController {
       observacao: dto.observacao ?? null,
       registradoPorId: currentUser.sub,
       origem: ShortageOrigin.WEB,
+      emprestada: dto.emprestada ?? false,
+      emprestadaDe: dto.emprestadaDe ?? null,
     });
     return this.toResponse(unwrapOrThrow(result));
   }
@@ -66,6 +69,22 @@ export class ShortagesController {
   async getById(@Param('id') id: string) {
     const result = await this.shortageUseCase.getById(id);
     return this.toResponse(unwrapOrThrow(result));
+  }
+
+  /**
+   * Transicao em lote: comprador seleciona varias faltas e conclui todas de
+   * uma vez com a mesma distribuidora (um pedido cobre varias pecas).
+   */
+  @Patch('status')
+  async transitionMany(@Body() dto: BatchTransitionDto, @CurrentUser() currentUser: RequestUser) {
+    const result = await this.shortageUseCase.transitionMany({
+      shortageIds: dto.ids,
+      novoStatus: dto.novoStatus,
+      executadoPorId: currentUser.sub,
+      distribuidoraId: dto.distribuidoraId,
+      motivo: dto.motivo,
+    });
+    return unwrapOrThrow(result).map((shortage) => this.toResponse(shortage));
   }
 
   @Patch(':id/status')

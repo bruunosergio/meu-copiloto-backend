@@ -9,7 +9,7 @@ export class TransitionShortageDto {
   @IsString()
   motivo?: string;
 
-  /** Distribuidora vencedora; so aceita ao transicionar para COMPRADA. */
+  /** Distribuidora vencedora; so aceita ao transicionar para CONCLUIDA. */
   @IsOptional()
   @IsString()
   distribuidoraId?: string;

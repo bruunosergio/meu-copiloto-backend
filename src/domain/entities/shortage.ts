@@ -1,7 +1,11 @@
+/**
+ * Ciclo simplificado (ADR-0008): a etapa de cotacao foi eliminada porque na
+ * pratica dura minutos. CONCLUIDA = pedido feito na distribuidora vencedora;
+ * RECEBIDA = a peca chegou na loja.
+ */
 export enum ShortageStatus {
   REGISTRADA = 'REGISTRADA',
-  EM_COTACAO = 'EM_COTACAO',
-  COMPRADA = 'COMPRADA',
+  CONCLUIDA = 'CONCLUIDA',
   RECEBIDA = 'RECEBIDA',
   CANCELADA = 'CANCELADA',
 }
@@ -17,9 +21,8 @@ export enum ShortageOrigin {
  * Ver docs/02-modelo-dominio.md - secao 3.
  */
 export const TRANSICOES_PERMITIDAS: Record<ShortageStatus, ShortageStatus[]> = {
-  [ShortageStatus.REGISTRADA]: [ShortageStatus.EM_COTACAO, ShortageStatus.CANCELADA],
-  [ShortageStatus.EM_COTACAO]: [ShortageStatus.COMPRADA, ShortageStatus.CANCELADA],
-  [ShortageStatus.COMPRADA]: [ShortageStatus.RECEBIDA],
+  [ShortageStatus.REGISTRADA]: [ShortageStatus.CONCLUIDA, ShortageStatus.CANCELADA],
+  [ShortageStatus.CONCLUIDA]: [ShortageStatus.RECEBIDA],
   [ShortageStatus.RECEBIDA]: [],
   [ShortageStatus.CANCELADA]: [],
 };
@@ -32,6 +35,12 @@ export interface ShortageProps {
   qtdRestante: number;
   observacao: string | null;
   registradoPorId: string;
+  /**
+   * Nome de quem registrou, carregado junto na leitura (read model) para a
+   * fila do comprador nao precisar de uma segunda chamada. Null quando a
+   * relacao nao foi carregada.
+   */
+  registradoPorNome?: string | null;
   distribuidoraId: string | null;
   origem: ShortageOrigin;
   status: ShortageStatus;
@@ -70,6 +79,10 @@ export class Shortage {
     return this.props.registradoPorId;
   }
 
+  get registradoPorNome(): string | null {
+    return this.props.registradoPorNome ?? null;
+  }
+
   get distribuidoraId(): string | null {
     return this.props.distribuidoraId;
   }
@@ -99,6 +112,6 @@ export class Shortage {
   }
 
   toPublic() {
-    return { ...this.props };
+    return { ...this.props, registradoPorNome: this.registradoPorNome };
   }
 }

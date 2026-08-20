@@ -2,7 +2,7 @@ import { IsEmail, IsEnum, IsOptional, IsString, Matches, MinLength, ValidateIf }
 import { Role } from '../../../domain/entities';
 
 /**
- * ADMIN/COMPRADOR: e-mail+senha. VENDEDOR: usuario+PIN (ver ADR-0007).
+ * ADMIN/COMPRADOR/GERENTE: e-mail+senha. VENDEDOR: usuario+PIN (ver ADR-0007).
  * A validacao condicional aqui e so a primeira camada (UX rapida no formulario);
  * a regra de negocio definitiva vive em UserManagementUseCaseImpl.
  */
@@ -11,7 +11,7 @@ export class CreateUserDto {
   @MinLength(2, { message: 'O nome deve ter ao menos 2 caracteres.' })
   nome!: string;
 
-  @IsEnum(Role, { message: 'Papel invalido. Use ADMIN, VENDEDOR ou COMPRADOR.' })
+  @IsEnum(Role, { message: 'Papel invalido. Use ADMIN, VENDEDOR, COMPRADOR ou GERENTE.' })
   papel!: Role;
 
   @ValidateIf((dto) => dto.papel !== Role.VENDEDOR)

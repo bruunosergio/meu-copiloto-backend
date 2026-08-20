@@ -23,7 +23,7 @@ Critérios de aceite:
 
 Entregas:
 
-- Backend: autenticação JWT com papéis, CRUD de usuários (admin), CRUD de faltas com ciclo de vida completo (`REGISTRADA → EM_COTACAO → COMPRADA → RECEBIDA` / `CANCELADA`) e histórico de transições.
+- Backend: autenticação JWT com papéis, CRUD de usuários (admin), CRUD de faltas com ciclo de vida completo (`REGISTRADA → CONCLUIDA → RECEBIDA` / `CANCELADA`, ver ADR-0008) e histórico de transições.
 - Banco PostgreSQL com migrations e `store_id` em todas as tabelas.
 - Painel web: login, administração de usuários, formulário de registro de falta, **tela de faltas do comprador** (filtros por status/data/vendedor, agrupamento, transição de status, ações em lote).
 - Deploy em ambiente acessível pela loja piloto.

@@ -8,12 +8,21 @@ import {
 import { Shortage, ShortageStatus, StatusTransition } from '../../domain/entities';
 import { ShortageMapper, StatusTransitionMapper } from '../mappers';
 
+/**
+ * Toda leitura carrega junto o nome de quem registrou (registradoPor.nome):
+ * a fila do comprador mostra "por Fulano" sem uma segunda chamada.
+ */
+const INCLUDE_REGISTRADO_POR = { registradoPor: { select: { nome: true } } } as const;
+
 @Injectable()
 export class PrismaShortageRepository implements ShortageRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string): Promise<Shortage | null> {
-    const raw = await this.prisma.shortage.findUnique({ where: { id } });
+    const raw = await this.prisma.shortage.findUnique({
+      where: { id },
+      include: INCLUDE_REGISTRADO_POR,
+    });
     return raw ? ShortageMapper.toDomain(raw) : null;
   }
 
@@ -24,6 +33,7 @@ export class PrismaShortageRepository implements ShortageRepository {
         ...(filters.status && filters.status.length > 0 && { status: { in: filters.status } }),
         ...(filters.registradoPorId && { registradoPorId: filters.registradoPorId }),
       },
+      include: INCLUDE_REGISTRADO_POR,
       orderBy: { criadaEm: 'asc' },
     });
     return raws.map(ShortageMapper.toDomain);
@@ -40,6 +50,7 @@ export class PrismaShortageRepository implements ShortageRepository {
         registradoPorId: data.registradoPorId,
         origem: data.origem,
       },
+      include: INCLUDE_REGISTRADO_POR,
     });
     return ShortageMapper.toDomain(raw);
   }
@@ -55,6 +66,7 @@ export class PrismaShortageRepository implements ShortageRepository {
         status,
         ...(distribuidoraId !== undefined && { distribuidoraId }),
       },
+      include: INCLUDE_REGISTRADO_POR,
     });
     return ShortageMapper.toDomain(raw);
   }
@@ -63,6 +75,7 @@ export class PrismaShortageRepository implements ShortageRepository {
     const raw = await this.prisma.shortage.update({
       where: { id },
       data: { distribuidoraId },
+      include: INCLUDE_REGISTRADO_POR,
     });
     return ShortageMapper.toDomain(raw);
   }

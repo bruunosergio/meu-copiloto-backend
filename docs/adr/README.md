@@ -23,3 +23,4 @@ Cada ADR segue a estrutura:
 | [0005](0005-prisma-como-orm.md) | Prisma como ORM/query builder | Aceito |
 | [0006](0006-hospedagem-piloto-gratuita.md) | Hospedagem do piloto: Neon + Render + Vercel (camada gratuita) | Aceito |
 | [0007](0007-login-loja-e-pin-vendedor.md) | Vendedor loga pelo terminal da loja (código+senha) e PIN pessoal, não e-mail+senha | Aceito |
+| [0008](0008-ciclo-concluida-e-lote.md) | Ciclo da falta sem etapa de cotação; conclusão e recebimento em lote | Aceito |
