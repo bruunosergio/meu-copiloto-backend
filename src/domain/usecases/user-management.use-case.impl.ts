@@ -6,7 +6,7 @@ import {
   UserManagementUseCase,
 } from '../ports/input';
 import { PasswordHasherPort, UserRepository } from '../ports/output';
-import { Role, User } from '../entities';
+import { User } from '../entities';
 
 const USUARIO_REGEX = /^[a-z0-9._-]{3,20}$/;
 const PIN_REGEX = /^\d{4,6}$/;
@@ -19,22 +19,22 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
 
   async create(input: CreateUserInput): Promise<Result<User, Failure>> {
     try {
-      const validationError = this.validarCredenciaisPorPapel(input.papel, input);
+      const validationError = this.validarCredenciais(input);
       if (validationError) {
         return Result.error(validationError);
       }
 
-      if (input.papel === Role.VENDEDOR) {
-        const usuario = input.usuario!.toLowerCase();
-        const existente = await this.userRepository.findByUsuario(input.storeId, usuario);
-        if (existente) {
-          return Result.error(
-            new ConflictFailure(`Ja existe um vendedor com o usuario "${usuario}" nesta loja.`),
-          );
-        }
-      } else {
-        const existente = await this.userRepository.findByEmail(input.storeId, input.email!);
-        if (existente) {
+      const usuario = input.usuario!.toLowerCase();
+      const existenteUsuario = await this.userRepository.findByUsuario(input.storeId, usuario);
+      if (existenteUsuario) {
+        return Result.error(
+          new ConflictFailure(`Ja existe um usuario com o identificador "${usuario}" nesta loja.`),
+        );
+      }
+
+      if (input.email) {
+        const existenteEmail = await this.userRepository.findByEmail(input.storeId, input.email);
+        if (existenteEmail) {
           return Result.error(new ConflictFailure(`Ja existe um usuario com o e-mail ${input.email}.`));
         }
       }
@@ -48,16 +48,15 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
         }
       }
 
-      const isVendedor = input.papel === Role.VENDEDOR;
-      const senhaHash = !isVendedor ? await this.passwordHasher.hash(input.senha!) : null;
-      const pinHash = isVendedor ? await this.passwordHasher.hash(input.pin!) : null;
+      const pinHash = await this.passwordHasher.hash(input.pin!);
+      const senhaHash = input.senha ? await this.passwordHasher.hash(input.senha) : null;
 
       const user = await this.userRepository.create({
         storeId: input.storeId,
         nome: input.nome,
-        email: isVendedor ? null : input.email!,
+        email: input.email?.trim() ? input.email.trim() : null,
         senhaHash,
-        usuario: isVendedor ? input.usuario!.toLowerCase() : null,
+        usuario,
         pinHash,
         telefoneWhatsapp: input.telefoneWhatsapp,
         papel: input.papel,
@@ -76,15 +75,6 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
         return Result.error(new NotFoundFailure('Usuario', id));
       }
 
-      const papelEfetivo = input.papel ?? existente.papel;
-      const isVendedor = papelEfetivo === Role.VENDEDOR;
-
-      if (input.usuario !== undefined && !isVendedor) {
-        return Result.error(new ValidationFailure('Usuario/PIN sao exclusivos do papel VENDEDOR.'));
-      }
-      if ((input.email !== undefined || input.senha !== undefined) && isVendedor) {
-        return Result.error(new ValidationFailure('E-mail/senha nao se aplicam ao papel VENDEDOR.'));
-      }
       if (input.usuario !== undefined && !USUARIO_REGEX.test(input.usuario.toLowerCase())) {
         return Result.error(
           new ValidationFailure(
@@ -95,6 +85,9 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
       if (input.pin !== undefined && !PIN_REGEX.test(input.pin)) {
         return Result.error(new ValidationFailure('PIN deve ter de 4 a 6 digitos numericos.'));
       }
+      if (input.senha !== undefined && input.senha.length < 8) {
+        return Result.error(new ValidationFailure('Senha deve ter ao menos 8 caracteres.'));
+      }
 
       if (input.usuario !== undefined) {
         const usuarioNormalizado = input.usuario.toLowerCase();
@@ -104,8 +97,17 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
         );
         if (comMesmoUsuario && comMesmoUsuario.id !== id) {
           return Result.error(
-            new ConflictFailure(`Ja existe um vendedor com o usuario "${usuarioNormalizado}" nesta loja.`),
+            new ConflictFailure(
+              `Ja existe um usuario com o identificador "${usuarioNormalizado}" nesta loja.`,
+            ),
           );
+        }
+      }
+
+      if (input.email !== undefined && input.email) {
+        const comMesmoEmail = await this.userRepository.findByEmail(existente.storeId, input.email);
+        if (comMesmoEmail && comMesmoEmail.id !== id) {
+          return Result.error(new ConflictFailure(`Ja existe um usuario com o e-mail ${input.email}.`));
         }
       }
 
@@ -165,30 +167,19 @@ export class UserManagementUseCaseImpl implements UserManagementUseCase {
   }
 
   /**
-   * ADMIN/COMPRADOR/GERENTE exigem e-mail+senha; VENDEDOR exige usuario+PIN (ver ADR-0007).
-   * Cada papel usa exclusivamente o proprio conjunto de credenciais.
+   * Todo papel entra pela porta da loja com usuario+PIN (ADR-0010).
+   * E-mail/senha sao opcionais (ponte para contas antigas).
    */
-  private validarCredenciaisPorPapel(
-    papel: Role,
-    input: Pick<CreateUserInput, 'email' | 'senha' | 'usuario' | 'pin'>,
+  private validarCredenciais(
+    input: Pick<CreateUserInput, 'usuario' | 'pin'>,
   ): ValidationFailure | null {
-    if (papel === Role.VENDEDOR) {
-      if (!input.usuario || !USUARIO_REGEX.test(input.usuario.toLowerCase())) {
-        return new ValidationFailure(
-          'Usuario deve ter 3-20 caracteres: letras minusculas, numeros, ".", "_" ou "-".',
-        );
-      }
-      if (!input.pin || !PIN_REGEX.test(input.pin)) {
-        return new ValidationFailure('PIN deve ter de 4 a 6 digitos numericos.');
-      }
-      return null;
+    if (!input.usuario || !USUARIO_REGEX.test(input.usuario.toLowerCase())) {
+      return new ValidationFailure(
+        'Usuario deve ter 3-20 caracteres: letras minusculas, numeros, ".", "_" ou "-".',
+      );
     }
-
-    if (!input.email) {
-      return new ValidationFailure('E-mail e obrigatorio para ADMIN, COMPRADOR e GERENTE.');
-    }
-    if (!input.senha || input.senha.length < 8) {
-      return new ValidationFailure('Senha deve ter ao menos 8 caracteres.');
+    if (!input.pin || !PIN_REGEX.test(input.pin)) {
+      return new ValidationFailure('PIN deve ter de 4 a 6 digitos numericos.');
     }
     return null;
   }

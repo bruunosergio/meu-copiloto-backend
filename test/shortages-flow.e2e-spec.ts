@@ -19,8 +19,9 @@ import { Role } from '../src/domain/entities';
  * removidos individualmente no afterAll - nunca apagamos a loja nem o admin
  * criado pelo seed.
  *
- * O vendedor loga pelo fluxo do terminal da loja (codigo+senha -> escolhe o
- * nome -> PIN), nao por e-mail+senha - ver ADR-0007.
+ * Vendedor e comprador logam pelo terminal da loja (codigo+senha -> nome ->
+ * PIN). O admin do seed ainda entra por e-mail+senha (ponte de emergencia)
+ * para criar os usuarios do teste — ver ADR-0010.
  *
  * Requer DATABASE_URL apontando para um Postgres com as migrations e o seed
  * aplicados (o mesmo do `docker compose up` + `npm run seed` do README serve).
@@ -31,8 +32,10 @@ describe('Fluxo de faltas (e2e)', () => {
 
   const sufixo = Date.now();
   const vendedorUsuario = `vendedor.e2e.${sufixo}`;
+  const compradorUsuario = `comprador.e2e.${sufixo}`;
   const compradorEmail = `comprador.e2e.${sufixo}@teste.com`;
   const vendedorPin = '4321';
+  const compradorPin = '2468';
   const compradorSenha = 'CompradorSenha123!';
 
   let vendedorId: string;
@@ -86,7 +89,14 @@ describe('Fluxo de faltas (e2e)', () => {
     const compradorResponse = await request(app.getHttpServer())
       .post('/users')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ nome: 'Comprador E2E', email: compradorEmail, senha: compradorSenha, papel: Role.COMPRADOR })
+      .send({
+        nome: 'Comprador E2E',
+        usuario: compradorUsuario,
+        pin: compradorPin,
+        email: compradorEmail,
+        senha: compradorSenha,
+        papel: Role.COMPRADOR,
+      })
       .expect(201);
     compradorId = compradorResponse.body.id;
   });
@@ -127,10 +137,26 @@ describe('Fluxo de faltas (e2e)', () => {
     vendedorToken = vendedorLogin.body.token;
   });
 
-  it('comprador loga com e-mail+senha', async () => {
+  it('comprador loga pelo terminal da loja com PIN', async () => {
+    const storeCodigo = process.env.SEED_STORE_CODIGO ?? 'loja-piloto';
+    const storeSenha = process.env.SEED_STORE_SENHA ?? 'TrocarSenhaLoja123!';
+
+    const storeLogin = await request(app.getHttpServer())
+      .post('/auth/loja/login')
+      .send({ codigo: storeCodigo, senha: storeSenha })
+      .expect(200);
+    const storeToken: string = storeLogin.body.storeToken;
+
+    const naGrade = await request(app.getHttpServer())
+      .get('/auth/loja/vendedores')
+      .set('Authorization', `Bearer ${storeToken}`)
+      .expect(200);
+    expect(naGrade.body.some((v: { id: string }) => v.id === compradorId)).toBe(true);
+
     const compradorLogin = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: compradorEmail, senha: compradorSenha })
+      .post('/auth/loja/vendedor-login')
+      .set('Authorization', `Bearer ${storeToken}`)
+      .send({ userId: compradorId, pin: compradorPin })
       .expect(200);
     compradorToken = compradorLogin.body.token;
   });

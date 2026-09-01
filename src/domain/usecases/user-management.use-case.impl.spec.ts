@@ -13,29 +13,31 @@ describe('UserManagementUseCaseImpl', () => {
     useCase = new UserManagementUseCaseImpl(userRepository, new FakePasswordHasher());
   });
 
-  describe('ADMIN/COMPRADOR (email+senha)', () => {
+  describe('ADMIN/COMPRADOR (usuario+PIN)', () => {
     it('cria um usuario com sucesso', async () => {
       const result = await useCase.create({
         storeId,
         nome: 'Comprador A',
+        usuario: 'comprador.a',
+        pin: '1234',
         email: 'comprador@loja.com',
-        senha: 'senha12345',
         telefoneWhatsapp: '5511999990000',
         papel: Role.COMPRADOR,
       });
 
       expect(result.isOk).toBe(true);
       expect(result.value.email).toBe('comprador@loja.com');
-      expect(result.value.senhaHash).not.toBe('senha12345');
-      expect(result.value.usuario).toBeNull();
+      expect(result.value.usuario).toBe('comprador.a');
+      expect(result.value.pinHash).not.toBe('1234');
     });
 
     it('rejeita e-mail duplicado na mesma loja', async () => {
       await useCase.create({
         storeId,
         nome: 'Comprador A',
+        usuario: 'comprador.a',
+        pin: '1234',
         email: 'comprador@loja.com',
-        senha: 'senha12345',
         telefoneWhatsapp: null,
         papel: Role.COMPRADOR,
       });
@@ -43,8 +45,9 @@ describe('UserManagementUseCaseImpl', () => {
       const result = await useCase.create({
         storeId,
         nome: 'Outro Comprador',
+        usuario: 'comprador.b',
+        pin: '5678',
         email: 'comprador@loja.com',
-        senha: 'outrasenha',
         telefoneWhatsapp: null,
         papel: Role.COMPRADOR,
       });
@@ -53,11 +56,11 @@ describe('UserManagementUseCaseImpl', () => {
       expect(result.error).toBeInstanceOf(ConflictFailure);
     });
 
-    it('rejeita criacao sem e-mail', async () => {
+    it('rejeita criacao sem usuario', async () => {
       const result = await useCase.create({
         storeId,
-        nome: 'Sem Email',
-        senha: 'senha12345',
+        nome: 'Sem Usuario',
+        pin: '1234',
         telefoneWhatsapp: null,
         papel: Role.ADMIN,
       });
@@ -70,8 +73,8 @@ describe('UserManagementUseCaseImpl', () => {
       const criado = await useCase.create({
         storeId,
         nome: 'Comprador B',
-        email: 'comprador2@loja.com',
-        senha: 'senha12345',
+        usuario: 'comprador.b',
+        pin: '1234',
         telefoneWhatsapp: null,
         papel: Role.COMPRADOR,
       });

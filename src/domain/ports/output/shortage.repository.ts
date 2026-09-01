@@ -16,10 +16,18 @@ export interface ShortageFilters {
   registradoPorId?: string;
 }
 
+export interface UpdateShortageData {
+  codigoPeca?: string | null;
+  nomePeca?: string;
+  qtdRestante?: number;
+  observacao?: string | null;
+}
+
 export interface ShortageRepository {
   findById(id: string): Promise<Shortage | null>;
   list(filters: ShortageFilters): Promise<Shortage[]>;
   create(data: CreateShortageData): Promise<Shortage>;
+  update(id: string, data: UpdateShortageData): Promise<Shortage>;
   updateStatus(id: string, status: ShortageStatus, distribuidoraId?: string | null): Promise<Shortage>;
   setDistribuidora(id: string, distribuidoraId: string | null): Promise<Shortage>;
   recordTransition(data: {

@@ -59,10 +59,30 @@ export interface CancelShortageInput {
   motivo: string;
 }
 
+export interface UpdateShortageInput {
+  shortageId: string;
+  executadoPorId: string;
+  codigoPeca?: string | null;
+  nomePeca?: string;
+  qtdRestante?: number;
+  observacao?: string | null;
+  emprestada?: boolean;
+  emprestadaDe?: string | null;
+}
+
+export interface FindSimilaresInput {
+  storeId: string;
+  codigoPeca?: string | null;
+  nomePeca: string;
+  ignorarShortageId?: string;
+}
+
 export interface ShortageUseCase {
   register(input: RegisterShortageInput): Promise<Result<Shortage, Failure>>;
   list(input: ListShortagesInput): Promise<Result<Shortage[], Failure>>;
   getById(id: string): Promise<Result<Shortage, Failure>>;
+  findSimilares(input: FindSimilaresInput): Promise<Result<Shortage[], Failure>>;
+  update(input: UpdateShortageInput): Promise<Result<Shortage, Failure>>;
   transition(input: TransitionShortageInput): Promise<Result<Shortage, Failure>>;
   transitionMany(input: TransitionManyShortagesInput): Promise<Result<Shortage[], Failure>>;
   setDistribuidora(input: SetShortageDistribuidoraInput): Promise<Result<Shortage, Failure>>;

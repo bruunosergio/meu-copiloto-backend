@@ -91,31 +91,25 @@ export class AuthUseCaseImpl implements AuthUseCase {
     }
   }
 
-  /** Passo 2: lista os vendedores ativos da loja para o terminal exibir. */
+  /** Passo 2: lista quem tem PIN e pode entrar pelo terminal. */
   async listVendedoresParaLogin(storeId: string): Promise<Result<VendedorSummary[], Failure>> {
     try {
       const users = await this.userRepository.listByStore(storeId);
-      const vendedores = users
-        .filter((user) => user.isVendedor() && user.ativo)
-        .map((user) => ({ id: user.id, nome: user.nome }));
-      return Result.ok(vendedores);
+      const paraLogin = users
+        .filter((user) => user.ativo && !!user.pinHash)
+        .map((user) => ({ id: user.id, nome: user.nome, papel: user.papel }));
+      return Result.ok(paraLogin);
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));
     }
   }
 
-  /** Passo 3: o vendedor escolhido confirma com o PIN e recebe um token curto. */
+  /** Passo 3: o escolhido confirma o PIN. Token curto so para vendedor. */
   async loginVendedor(input: VendedorLoginInput): Promise<Result<LoginOutput, Failure>> {
     try {
       const user = await this.userRepository.findById(input.userId);
 
-      if (
-        !user ||
-        user.storeId !== input.storeId ||
-        !user.isVendedor() ||
-        !user.ativo ||
-        !user.pinHash
-      ) {
+      if (!user || user.storeId !== input.storeId || !user.ativo || !user.pinHash) {
         return Result.error(new InvalidCredentialsFailure('PIN invalido.'));
       }
 
@@ -126,7 +120,7 @@ export class AuthUseCaseImpl implements AuthUseCase {
 
       const token = this.tokenProvider.sign(
         { sub: user.id, storeId: user.storeId, papel: user.papel },
-        { expiresIn: this.tokenConfig.vendedorTokenExpiresIn },
+        user.isVendedor() ? { expiresIn: this.tokenConfig.vendedorTokenExpiresIn } : undefined,
       );
 
       return Result.ok({ token, user });

@@ -2,6 +2,7 @@ import {
   CreateShortageData,
   ShortageFilters,
   ShortageRepository,
+  UpdateShortageData,
 } from '../../ports/output';
 import { Shortage, ShortageStatus, StatusTransition } from '../../entities';
 
@@ -41,6 +42,22 @@ export class FakeShortageRepository implements ShortageRepository {
     });
     this.shortages.push(shortage);
     return shortage;
+  }
+
+  async update(id: string, data: UpdateShortageData): Promise<Shortage> {
+    const index = this.shortages.findIndex((s) => s.id === id);
+    if (index === -1) throw new Error('Falta nao encontrada no fake repository.');
+    const atual = this.shortages[index].toSnapshot();
+    const atualizada = new Shortage({
+      ...atual,
+      codigoPeca: data.codigoPeca !== undefined ? data.codigoPeca : atual.codigoPeca,
+      nomePeca: data.nomePeca ?? atual.nomePeca,
+      qtdRestante: data.qtdRestante ?? atual.qtdRestante,
+      observacao: data.observacao !== undefined ? data.observacao : atual.observacao,
+      atualizadaEm: new Date(),
+    });
+    this.shortages[index] = atualizada;
+    return atualizada;
   }
 
   async updateStatus(

@@ -1,6 +1,6 @@
 # ADR-0007 — Vendedor loga pelo terminal da loja (código+senha) e PIN pessoal, não e-mail+senha
 
-**Status:** Aceito (2026-08-18)
+**Status:** Parcialmente substituído por [ADR-0010](0010-login-unico-edicao-e-aviso-similar.md) (2026-08-31)
 
 ## Contexto
 

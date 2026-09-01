@@ -4,6 +4,7 @@ import {
   CreateShortageData,
   ShortageFilters,
   ShortageRepository,
+  UpdateShortageData,
 } from '../../domain/ports/output';
 import { Shortage, ShortageStatus, StatusTransition } from '../../domain/entities';
 import { ShortageMapper, StatusTransitionMapper } from '../mappers';
@@ -49,6 +50,20 @@ export class PrismaShortageRepository implements ShortageRepository {
         observacao: data.observacao,
         registradoPorId: data.registradoPorId,
         origem: data.origem,
+      },
+      include: INCLUDE_REGISTRADO_POR,
+    });
+    return ShortageMapper.toDomain(raw);
+  }
+
+  async update(id: string, data: UpdateShortageData): Promise<Shortage> {
+    const raw = await this.prisma.shortage.update({
+      where: { id },
+      data: {
+        ...(data.codigoPeca !== undefined && { codigoPeca: data.codigoPeca }),
+        ...(data.nomePeca !== undefined && { nomePeca: data.nomePeca }),
+        ...(data.qtdRestante !== undefined && { qtdRestante: data.qtdRestante }),
+        ...(data.observacao !== undefined && { observacao: data.observacao }),
       },
       include: INCLUDE_REGISTRADO_POR,
     });

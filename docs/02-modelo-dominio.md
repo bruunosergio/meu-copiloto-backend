@@ -34,17 +34,17 @@ Raiz do isolamento de dados. **Toda** entidade carrega `store_id` desde o dia 1,
 
 ### 2.2 Usuário (`User`)
 
-Cada papel usa um conjunto de credenciais diferente (ver [ADR-0007](adr/0007-login-loja-e-pin-vendedor.md)): ADMIN/COMPRADOR/GERENTE logam com e-mail+senha, de qualquer lugar; VENDEDOR loga pela sessão do terminal da loja (código+senha) + escolha do próprio nome + PIN.
+Todos os papéis logam pelo terminal da loja (código+senha → nome → PIN). E-mail+senha é opcional e serve só como acesso de emergência para contas antigas — ver [ADR-0010](adr/0010-login-unico-edicao-e-aviso-similar.md) (substitui em parte o [ADR-0007](adr/0007-login-loja-e-pin-vendedor.md)).
 
 | Campo | Tipo | Regras |
 |---|---|---|
 | `id` | uuid | — |
 | `store_id` | uuid | obrigatório |
 | `nome` | texto | obrigatório |
-| `email` | texto | único por loja; obrigatório para ADMIN/COMPRADOR, nulo para VENDEDOR |
-| `senha_hash` | texto | nunca em texto puro; obrigatório para ADMIN/COMPRADOR, nulo para VENDEDOR |
-| `usuario` | texto | único por loja; obrigatório para VENDEDOR (identificador curto exibido na lista do terminal), nulo para ADMIN/COMPRADOR |
-| `pin_hash` | texto | nunca em texto puro; obrigatório para VENDEDOR (4-6 dígitos), nulo para ADMIN/COMPRADOR |
+| `email` | texto | único por loja; opcional (legado / acesso de emergência em `/login`) |
+| `senha_hash` | texto | nunca em texto puro; opcional, só se houver e-mail |
+| `usuario` | texto | único por loja; obrigatório no cadastro (identificador curto) |
+| `pin_hash` | texto | nunca em texto puro; obrigatório no cadastro (PIN de 4-6 dígitos) para aparecer na grade |
 | `telefone_whatsapp` | texto | único global; identifica o autor da mensagem recebida no webhook |
 | `papel` | enum | `ADMIN`, `VENDEDOR`, `COMPRADOR`, `GERENTE` |
 | `ativo` | booleano | usuário inativo não loga nem registra falta |
@@ -53,7 +53,7 @@ Invariantes:
 
 - Mensagem recebida de telefone **não cadastrado ou inativo** é recusada com resposta educada — nunca cria falta.
 - Um usuário pode acumular papéis no futuro; no MVP, um papel por usuário é suficiente.
-- Um usuário nunca tem os dois conjuntos de credenciais ao mesmo tempo: e-mail/senha e usuário/PIN são mutuamente exclusivos, definidos pelo papel. GERENTE usa o mesmo conjunto de ADMIN/COMPRADOR (e-mail+senha).
+- Todo usuário novo tem `usuario`+PIN. E-mail+senha é extra opcional. Quem só tem e-mail+senha (legado) não aparece na grade até o admin cadastrar o PIN.
 
 ### 2.3 Falta (`Shortage`)
 
@@ -162,7 +162,9 @@ stateDiagram-v2
 Regras:
 
 - Transições fora das setas acima são inválidas e devem ser rejeitadas pelo domínio (não pela UI).
-- Cancelamento exige observação com o motivo. Só a partir de `REGISTRADA`.
+- Cancelamento exige observação com o motivo. Só a partir de `REGISTRADA`. Apaga o empréstimo `PENDENTE` vinculado, se houver; histórico `DEVOLVIDA` permanece.
+- Edição de campos da peça (e do empréstimo pendente) só em `REGISTRADA`, com a mesma permissão do cancelamento.
+- Ao registrar ou editar, o sistema **avisa** (não bloqueia) se já existe falta aberta com o mesmo código ou nome parecido.
 - Toda transição gera um `StatusTransition`.
 - **Distribuidora vencedora**: ao transicionar `REGISTRADA → CONCLUIDA` ("pedido feito ao fornecedor"), o comprador/gerente pode informar a distribuidora. É **opcional** no momento da transição e pode ser preenchida/corrigida depois, sem exigir nova transição de status. A distribuidora informada precisa pertencer à mesma loja e estar `ativa`. Em lote, **uma** distribuidora vale para todas as peças selecionadas (ver [ADR-0008](adr/0008-ciclo-concluida-e-lote.md)).
 
@@ -170,12 +172,14 @@ Regras:
 
 | Ação | ADMIN | GERENTE | COMPRADOR | VENDEDOR |
 |---|---|---|---|---|
-| Login no painel web | e-mail+senha | e-mail+senha | e-mail+senha | terminal da loja + PIN |
+| Login no painel web | terminal da loja + PIN | terminal da loja + PIN | terminal da loja + PIN | terminal da loja + PIN |
+| Acesso de emergência (`/login`) | e-mail+senha, se cadastrado | e-mail+senha, se cadastrado | e-mail+senha, se cadastrado | não (só PIN) |
 | Registrar falta (WhatsApp/web) | sim | sim | sim | sim |
 | Marcar falta como emprestada | sim | sim | sim | sim |
 | Ver fila de faltas completa | sim | sim | sim | somente as próprias |
 | Transicionar status (concluir/receber), inclusive em lote | sim | sim | sim | não |
 | Escolher/corrigir distribuidora vencedora | sim | sim | sim | não |
+| Editar falta REGISTRADA | sim | sim | sim | somente as próprias |
 | Cancelar falta | sim | sim | sim | somente as próprias em REGISTRADA |
 | Lista de empréstimos / devolver (lote) | sim | sim | sim | sim |
 | Quadro de tarefas / sprints | sim | sim | não | não |

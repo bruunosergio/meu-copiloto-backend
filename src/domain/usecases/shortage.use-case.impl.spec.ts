@@ -467,4 +467,67 @@ describe('ShortageUseCaseImpl', () => {
     expect(result.isErr).toBe(true);
     expect(result.error).toBeInstanceOf(ValidationFailure);
   });
+
+  it('cancelar falta emprestada remove o emprestimo pendente', async () => {
+    const result = await useCase.register({
+      storeId,
+      codigoPeca: null,
+      nomePeca: 'Peca Emprestada',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+      emprestada: true,
+      emprestadaDe: 'Parceiro',
+    });
+
+    await useCase.cancel({
+      shortageId: result.value.id,
+      executadoPorId: vendedor.id,
+      motivo: 'Digitou errado',
+    });
+
+    expect(await emprestimoRepository.listByStore(storeId)).toHaveLength(0);
+  });
+
+  it('edita uma falta REGISTRADA', async () => {
+    const registrada = await registrarFalta('NOME ERRADO');
+
+    const result = await useCase.update({
+      shortageId: registrada.id,
+      executadoPorId: vendedor.id,
+      nomePeca: 'FILTRO DE OLEO',
+      codigoPeca: 'fr-1',
+    });
+
+    expect(result.isOk).toBe(true);
+    expect(result.value.nomePeca).toBe('FILTRO DE OLEO');
+    expect(result.value.codigoPeca).toBe('FR-1');
+  });
+
+  it('aviso de similar encontra codigo igual e nome parecido', async () => {
+    await registrarFalta('FILTRO DE OLEO FRAM');
+    await useCase.register({
+      storeId,
+      codigoPeca: 'ABC-1',
+      nomePeca: 'PASTILHA',
+      qtdRestante: 0,
+      observacao: null,
+      registradoPorId: vendedor.id,
+      origem: ShortageOrigin.WEB,
+    });
+
+    const porNome = await useCase.findSimilares({
+      storeId,
+      nomePeca: 'FILTRO OLEO FRAM',
+    });
+    expect(porNome.value.some((s) => s.nomePeca === 'FILTRO DE OLEO FRAM')).toBe(true);
+
+    const porCodigo = await useCase.findSimilares({
+      storeId,
+      nomePeca: 'OUTRA',
+      codigoPeca: 'abc-1',
+    });
+    expect(porCodigo.value.some((s) => s.codigoPeca === 'ABC-1')).toBe(true);
+  });
 });

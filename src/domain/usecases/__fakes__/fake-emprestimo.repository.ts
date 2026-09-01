@@ -37,6 +37,14 @@ export class FakeEmprestimoRepository implements EmprestimoRepository {
     return this.emprestimos.filter((e) => ids.includes(e.id));
   }
 
+  async findByShortageId(shortageId: string): Promise<Emprestimo | null> {
+    return this.emprestimos.find((e) => e.shortageId === shortageId) ?? null;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.emprestimos = this.emprestimos.filter((e) => e.id !== id);
+  }
+
   async devolver(data: DevolverEmprestimosData): Promise<Emprestimo[]> {
     const devolvidos: Emprestimo[] = [];
     for (const id of data.ids) {

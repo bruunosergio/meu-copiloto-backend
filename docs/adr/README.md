@@ -22,5 +22,6 @@ Cada ADR segue a estrutura:
 | [0004](0004-pipeline-ia-com-confirmacao-humana.md) | Pipeline de interpretação com IA e confirmação humana obrigatória | Aceito |
 | [0005](0005-prisma-como-orm.md) | Prisma como ORM/query builder | Aceito |
 | [0006](0006-hospedagem-piloto-gratuita.md) | Hospedagem do piloto: Neon + Render + Vercel (camada gratuita) | Aceito |
-| [0007](0007-login-loja-e-pin-vendedor.md) | Vendedor loga pelo terminal da loja (código+senha) e PIN pessoal, não e-mail+senha | Aceito |
+| [0007](0007-login-loja-e-pin-vendedor.md) | Vendedor loga pelo terminal da loja (código+senha) e PIN pessoal, não e-mail+senha | Parcialmente substituído por ADR-0010 |
 | [0008](0008-ciclo-concluida-e-lote.md) | Ciclo da falta sem etapa de cotação; conclusão e recebimento em lote | Aceito |
+| [0010](0010-login-unico-edicao-e-aviso-similar.md) | Login único pela loja, edição de falta REGISTRADA e aviso de peça parecida | Aceito |

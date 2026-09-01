@@ -18,6 +18,7 @@ import { CancelShortageDto } from './cancel-shortage.dto';
 import { CreateShortageDto } from './create-shortage.dto';
 import { SetDistribuidoraDto } from './set-distribuidora.dto';
 import { TransitionShortageDto } from './transition-shortage.dto';
+import { UpdateShortageDto } from './update-shortage.dto';
 
 @Controller('shortages')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -65,6 +66,22 @@ export class ShortagesController {
     return unwrapOrThrow(result).map((shortage) => this.toResponse(shortage));
   }
 
+  @Get('similares')
+  async similares(
+    @CurrentUser() currentUser: RequestUser,
+    @Query('nome') nome?: string,
+    @Query('codigo') codigo?: string,
+    @Query('ignorarId') ignorarId?: string,
+  ) {
+    const result = await this.shortageUseCase.findSimilares({
+      storeId: currentUser.storeId,
+      nomePeca: nome ?? '',
+      codigoPeca: codigo ?? null,
+      ignorarShortageId: ignorarId,
+    });
+    return unwrapOrThrow(result).map((shortage) => this.toResponse(shortage));
+  }
+
   @Get(':id')
   async getById(@Param('id') id: string) {
     const result = await this.shortageUseCase.getById(id);
@@ -85,6 +102,25 @@ export class ShortagesController {
       motivo: dto.motivo,
     });
     return unwrapOrThrow(result).map((shortage) => this.toResponse(shortage));
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateShortageDto,
+    @CurrentUser() currentUser: RequestUser,
+  ) {
+    const result = await this.shortageUseCase.update({
+      shortageId: id,
+      executadoPorId: currentUser.sub,
+      codigoPeca: dto.codigoPeca,
+      nomePeca: dto.nomePeca,
+      qtdRestante: dto.qtdRestante,
+      observacao: dto.observacao,
+      emprestada: dto.emprestada,
+      emprestadaDe: dto.emprestadaDe,
+    });
+    return this.toResponse(unwrapOrThrow(result));
   }
 
   @Patch(':id/status')

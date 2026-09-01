@@ -72,29 +72,31 @@ O servidor sobe em `http://localhost:3000` (configurável via `PORT`). Login do 
 
 Todas as rotas abaixo (exceto `/health` e `/auth/*`) exigem o header `Authorization: Bearer <token>`.
 
-Autenticação tem dois fluxos por papel — ver [ADR-0007](docs/adr/0007-login-loja-e-pin-vendedor.md):
+Autenticação do dia a dia é única para todos os papéis — ver [ADR-0010](docs/adr/0010-login-unico-edicao-e-aviso-similar.md):
 
 | Método | Rota | Token exigido | Descrição |
 |---|---|---|---|
 | GET | `/health` | — | Disponibilidade (alvo do keep-alive e de monitoramento externo) |
-| POST | `/auth/login` | — | ADMIN/COMPRADOR/GERENTE: `{ email, senha }` → `{ token, user }` |
-| POST | `/auth/loja/login` | — | Vendedor, passo 1: `{ codigo, senha }` da loja → `{ storeToken, store }` |
-| GET | `/auth/loja/vendedores` | storeToken | Vendedor, passo 2: lista `{ id, nome }` dos vendedores ativos |
-| POST | `/auth/loja/vendedor-login` | storeToken | Vendedor, passo 3: `{ userId, pin }` → `{ token, user }` |
+| POST | `/auth/login` | — | Emergência/legado: `{ email, senha }` → `{ token, user }` (só quem ainda tem e-mail+senha) |
+| POST | `/auth/loja/login` | — | Passo 1: `{ codigo, senha }` da loja → `{ storeToken, store }` |
+| GET | `/auth/loja/vendedores` | storeToken | Passo 2: lista `{ id, nome, papel }` dos usuários ativos com PIN |
+| POST | `/auth/loja/vendedor-login` | storeToken | Passo 3: `{ userId, pin }` → `{ token, user }` (JWT curto só para VENDEDOR) |
 
 | Método | Rota | Papel exigido | Descrição |
 |---|---|---|---|
 | GET | `/users` | ADMIN | Lista usuários da loja |
-| POST | `/users` | ADMIN | Cria usuário — ADMIN/COMPRADOR/GERENTE: `{ nome, email, senha, papel, telefoneWhatsapp? }`; VENDEDOR: `{ nome, usuario, pin, papel, telefoneWhatsapp? }` |
+| POST | `/users` | ADMIN | Cria usuário — todos os papéis: `{ nome, usuario, pin, papel, email?, senha?, telefoneWhatsapp? }` |
 | PATCH | `/users/:id` | ADMIN | Atualiza dados/papel/ativo |
 | PATCH | `/users/:id/deactivate` | ADMIN | Desativa usuário |
 | POST | `/shortages` | qualquer autenticado | Registra falta (`nomePeca`, `qtdRestante`, `codigoPeca?`, `observacao?`, `emprestada?`, `emprestadaDe?`) |
+| GET | `/shortages/similares` | qualquer autenticado | Aviso (não bloqueia): faltas abertas com o mesmo código ou nome parecido (`nome`, `codigo?`, `ignorarId?`) |
 | GET | `/shortages?status=REGISTRADA,CONCLUIDA` | qualquer autenticado | Lista faltas — vendedor só vê as próprias; admin/comprador/gerente veem a fila completa |
 | GET | `/shortages/:id` | qualquer autenticado | Detalhe de uma falta |
+| PATCH | `/shortages/:id` | ver regra | Edita falta `REGISTRADA` (mesma permissão do cancelamento; pode ligar/desligar empréstimo) |
 | PATCH | `/shortages/:id/status` | ADMIN/COMPRADOR/GERENTE | Transição operacional (`novoStatus`: `CONCLUIDA`\|`RECEBIDA`; `distribuidoraId?` só aceito ao ir para `CONCLUIDA`) |
 | PATCH | `/shortages/status` | ADMIN/COMPRADOR/GERENTE | Transição em lote (`ids`, `novoStatus`, `distribuidoraId?`) — tudo-ou-nada |
 | PATCH | `/shortages/:id/distribuidora` | ADMIN/COMPRADOR/GERENTE | Define/corrige a distribuidora vencedora fora do momento da transição (`distribuidoraId` ou `null` para limpar) |
-| PATCH | `/shortages/:id/cancel` | ver regra | Cancela (`motivo` obrigatório) — admin/comprador/gerente sempre; vendedor só a própria falta em `REGISTRADA` |
+| PATCH | `/shortages/:id/cancel` | ver regra | Cancela (`motivo` obrigatório) e apaga empréstimo `PENDENTE` vinculado — admin/comprador/gerente sempre; vendedor só a própria falta em `REGISTRADA` |
 | GET | `/emprestimos?status=PENDENTE` | qualquer autenticado | Lista empréstimos da loja |
 | PATCH | `/emprestimos/devolver` | qualquer autenticado | Marca empréstimos como devolvidos (`ids`, `devolvidoPara`) |
 | GET/POST | `/tarefas`, `/tarefas/sprints` | ADMIN/GERENTE | Quadro de tarefas e sprints |
@@ -106,7 +108,7 @@ Autenticação tem dois fluxos por papel — ver [ADR-0007](docs/adr/0007-login-
 
 ## Decisões técnicas da Fase 1 (complementam os ADRs)
 
-- **JWT sem refresh token por ora** — proporcional ao tamanho do MVP (uma loja, poucos usuários). Token de acesso único com expiração configurável (`JWT_EXPIRES_IN`, padrão 8h — a duração de um turno). Vendedor usa tokens separados e mais curtos (`JWT_EXPIRES_IN_LOJA`/`JWT_EXPIRES_IN_VENDEDOR` — ver ADR-0007). Reavaliar se o produto crescer.
+- **JWT sem refresh token por ora** — proporcional ao tamanho do MVP (uma loja, poucos usuários). Token de acesso único com expiração configurável (`JWT_EXPIRES_IN`, padrão 8h — a duração de um turno). Só o VENDEDOR usa token mais curto (`JWT_EXPIRES_IN_VENDEDOR`); a sessão do terminal usa `JWT_EXPIRES_IN_LOJA` — ver ADR-0010. Reavaliar se o produto crescer.
 - **`bcryptjs`** em vez de `bcrypt` — evita compilação nativa no Windows.
 - **Uma loja semeada por script** — não há tela de CRUD de lojas ainda (isso é Fase 4); o `storeId` já existe em todas as tabelas.
 - **`RawCapture` fora do schema** — só entra no banco a partir da Fase 2, quando o WhatsApp existir de fato.

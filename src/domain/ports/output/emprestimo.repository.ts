@@ -17,6 +17,8 @@ export interface EmprestimoRepository {
   create(data: CreateEmprestimoData): Promise<Emprestimo>;
   listByStore(storeId: string, status?: EmprestimoStatus): Promise<Emprestimo[]>;
   findByIds(ids: string[]): Promise<Emprestimo[]>;
+  findByShortageId(shortageId: string): Promise<Emprestimo | null>;
+  delete(id: string): Promise<void>;
   devolver(data: DevolverEmprestimosData): Promise<Emprestimo[]>;
 }
 

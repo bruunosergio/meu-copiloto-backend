@@ -48,6 +48,18 @@ export class PrismaEmprestimoRepository implements EmprestimoRepository {
     return raws.map(EmprestimoMapper.toDomain);
   }
 
+  async findByShortageId(shortageId: string): Promise<Emprestimo | null> {
+    const raw = await this.prisma.emprestimo.findUnique({
+      where: { shortageId },
+      include: INCLUDE_RELACOES,
+    });
+    return raw ? EmprestimoMapper.toDomain(raw) : null;
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.emprestimo.delete({ where: { id } });
+  }
+
   async devolver(data: DevolverEmprestimosData): Promise<Emprestimo[]> {
     await this.prisma.emprestimo.updateMany({
       where: { id: { in: data.ids } },

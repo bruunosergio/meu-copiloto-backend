@@ -93,11 +93,11 @@ export class User {
   }
 
   /**
-   * ADMIN, COMPRADOR e GERENTE logam com e-mail+senha, de qualquer lugar.
-   * VENDEDOR loga pela sessao da loja + usuario+PIN (ver ADR-0007).
+   * Entrada principal e a porta da loja + PIN (ADR-0010).
+   * E-mail+senha continua so para contas antigas sem PIN.
    */
   usaLoginPessoal(): boolean {
-    return !this.isVendedor();
+    return !!this.email && !!this.senhaHash;
   }
 
   toPublic() {

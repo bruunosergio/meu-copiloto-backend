@@ -9,13 +9,17 @@ import {
 } from '../failures';
 import {
   CancelShortageInput,
+  FindSimilaresInput,
   ListShortagesInput,
   RegisterShortageInput,
   SetShortageDistribuidoraInput,
   ShortageUseCase,
   TransitionManyShortagesInput,
   TransitionShortageInput,
+  UpdateShortageInput,
 } from '../ports/input';
+import { nomesParecidos } from '../peca-similaridade';
+import { User } from '../entities';
 import {
   DistribuidoraRepository,
   EmprestimoRepository,
@@ -103,6 +107,89 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         return Result.error(new NotFoundFailure('Falta', id));
       }
       return Result.ok(shortage);
+    } catch (error) {
+      return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  async findSimilares(input: FindSimilaresInput): Promise<Result<Shortage[], Failure>> {
+    try {
+      const abertas = await this.shortageRepository.list({
+        storeId: input.storeId,
+        status: [ShortageStatus.REGISTRADA, ShortageStatus.CONCLUIDA],
+      });
+      const codigo = input.codigoPeca?.trim() ? input.codigoPeca.trim().toUpperCase() : null;
+      const nome = input.nomePeca.trim();
+      const similares = abertas.filter((shortage) => {
+        if (input.ignorarShortageId && shortage.id === input.ignorarShortageId) {
+          return false;
+        }
+        const codigoIgual = !!codigo && !!shortage.codigoPeca && shortage.codigoPeca === codigo;
+        return codigoIgual || nomesParecidos(shortage.nomePeca, nome);
+      });
+      return Result.ok(similares);
+    } catch (error) {
+      return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  async update(input: UpdateShortageInput): Promise<Result<Shortage, Failure>> {
+    try {
+      const shortage = await this.shortageRepository.findById(input.shortageId);
+      if (!shortage) {
+        return Result.error(new NotFoundFailure('Falta', input.shortageId));
+      }
+
+      const executor = await this.userRepository.findById(input.executadoPorId);
+      if (!executor) {
+        return Result.error(new UnauthorizedFailure());
+      }
+      if (!this.podeEditarRegistrada(executor, shortage)) {
+        return Result.error(
+          new UnauthorizedFailure('Voce so pode editar as proprias faltas enquanto estiverem REGISTRADA.'),
+        );
+      }
+      if (shortage.status !== ShortageStatus.REGISTRADA) {
+        return Result.error(new ValidationFailure('So e possivel editar uma falta ainda REGISTRADA.'));
+      }
+      if (input.qtdRestante !== undefined && input.qtdRestante < 0) {
+        return Result.error(new ValidationFailure('A quantidade restante nao pode ser negativa.'));
+      }
+      if (input.nomePeca !== undefined && !input.nomePeca.trim()) {
+        return Result.error(new ValidationFailure('O nome da peca e obrigatorio.'));
+      }
+
+      const codigoPeca =
+        input.codigoPeca === undefined
+          ? undefined
+          : input.codigoPeca?.trim()
+            ? input.codigoPeca.trim().toUpperCase()
+            : null;
+      const nomePeca = input.nomePeca !== undefined ? input.nomePeca.trim().toUpperCase() : undefined;
+
+      const atualizada = await this.shortageRepository.update(shortage.id, {
+        codigoPeca,
+        nomePeca,
+        qtdRestante: input.qtdRestante,
+        observacao: input.observacao,
+      });
+
+      if (input.emprestada === true) {
+        const emprestimo = await this.emprestimoRepository.findByShortageId(shortage.id);
+        if (!emprestimo) {
+          await this.emprestimoRepository.create({
+            storeId: shortage.storeId,
+            shortageId: shortage.id,
+            emprestadaDe: input.emprestadaDe?.trim() ? input.emprestadaDe.trim() : null,
+            registradoPorId: input.executadoPorId,
+          });
+        }
+      }
+      if (input.emprestada === false) {
+        await this.apagarEmprestimoPendente(shortage.id);
+      }
+
+      return Result.ok(atualizada);
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));
     }
@@ -341,6 +428,8 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
         ShortageStatus.CANCELADA,
       );
 
+      await this.apagarEmprestimoPendente(shortage.id);
+
       await this.shortageRepository.recordTransition({
         shortageId: shortage.id,
         de: shortage.status,
@@ -352,6 +441,20 @@ export class ShortageUseCaseImpl implements ShortageUseCase {
       return Result.ok(atualizada);
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  private podeEditarRegistrada(executor: User, shortage: Shortage): boolean {
+    return (
+      executor.podeGerenciarFilaCompleta() ||
+      (executor.papel === Role.VENDEDOR && shortage.registradoPorId === executor.id)
+    );
+  }
+
+  private async apagarEmprestimoPendente(shortageId: string): Promise<void> {
+    const emprestimo = await this.emprestimoRepository.findByShortageId(shortageId);
+    if (emprestimo?.isPendente()) {
+      await this.emprestimoRepository.delete(emprestimo.id);
     }
   }
 }

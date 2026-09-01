@@ -152,7 +152,7 @@ describe('AuthUseCaseImpl', () => {
   });
 
   describe('listVendedoresParaLogin', () => {
-    it('lista apenas vendedores ativos da loja', async () => {
+    it('lista usuarios ativos com PIN, de qualquer papel', async () => {
       await userRepository.create({
         storeId,
         nome: 'Vendedor Ativo',
@@ -162,6 +162,16 @@ describe('AuthUseCaseImpl', () => {
         pinHash: await passwordHasher.hash('1234'),
         telefoneWhatsapp: null,
         papel: Role.VENDEDOR,
+      });
+      await userRepository.create({
+        storeId,
+        nome: 'Gerente Ativo',
+        email: null,
+        senhaHash: null,
+        usuario: 'gerente.ativo',
+        pinHash: await passwordHasher.hash('4321'),
+        telefoneWhatsapp: null,
+        papel: Role.GERENTE,
       });
       const inativo = await userRepository.create({
         storeId,
@@ -178,8 +188,8 @@ describe('AuthUseCaseImpl', () => {
       const result = await useCase.listVendedoresParaLogin(storeId);
 
       expect(result.isOk).toBe(true);
-      expect(result.value).toHaveLength(1);
-      expect(result.value[0].nome).toBe('Vendedor Ativo');
+      expect(result.value).toHaveLength(2);
+      expect(result.value.map((u) => u.nome).sort()).toEqual(['Gerente Ativo', 'Vendedor Ativo']);
     });
   });
 
@@ -226,11 +236,29 @@ describe('AuthUseCaseImpl', () => {
       expect(result.error).toBeInstanceOf(InvalidCredentialsFailure);
     });
 
-    it('rejeita usuario que nao e vendedor', async () => {
+    it('rejeita usuario sem PIN', async () => {
       const result = await useCase.loginVendedor({ storeId, userId: 'user-1', pin: 'qualquer' });
 
       expect(result.isErr).toBe(true);
       expect(result.error).toBeInstanceOf(InvalidCredentialsFailure);
+    });
+
+    it('autentica gerente com PIN', async () => {
+      const gerente = await userRepository.create({
+        storeId,
+        nome: 'Gerente A',
+        email: null,
+        senhaHash: null,
+        usuario: 'gerente.a',
+        pinHash: await passwordHasher.hash('9876'),
+        telefoneWhatsapp: null,
+        papel: Role.GERENTE,
+      });
+
+      const result = await useCase.loginVendedor({ storeId, userId: gerente.id, pin: '9876' });
+
+      expect(result.isOk).toBe(true);
+      expect(result.value.user.papel).toBe(Role.GERENTE);
     });
   });
 });

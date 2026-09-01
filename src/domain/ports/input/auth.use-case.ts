@@ -30,6 +30,7 @@ export interface StoreLoginOutput {
 export interface VendedorSummary {
   id: string;
   nome: string;
+  papel: User['papel'];
 }
 
 export interface VendedorLoginInput {
@@ -39,10 +40,8 @@ export interface VendedorLoginInput {
 }
 
 /**
- * Auth tem dois fluxos independentes (ver ADR-0007):
- * - `login`: ADMIN/COMPRADOR, e-mail+senha, de qualquer lugar.
- * - `loginStore` -> `listVendedoresParaLogin` -> `loginVendedor`: terminal
- *   compartilhado da loja (codigo+senha) e o vendedor se identifica na lista + PIN.
+ * Porta da loja (ADR-0010): codigo+senha do terminal, depois nome+PIN de
+ * qualquer papel. `login` por e-mail fica so como ponte para contas antigas.
  */
 export interface AuthUseCase {
   login(input: LoginInput): Promise<Result<LoginOutput, Failure>>;
