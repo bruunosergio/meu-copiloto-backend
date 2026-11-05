@@ -55,6 +55,13 @@ export class AuthController {
     return unwrapOrThrow(result);
   }
 
+  /** Pacote cifrado no painel: permite abrir o terminal e o PIN sem internet. */
+  @Get('loja/offline-bundle')
+  @UseGuards(StoreSessionGuard)
+  async offlineBundle(@CurrentStoreSession() storeSession: StoreSession) {
+    return unwrapOrThrow(await this.authUseCase.getOfflineBundle(storeSession.storeId));
+  }
+
   @Post('loja/vendedor-login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(StoreSessionGuard)

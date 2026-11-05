@@ -1,9 +1,10 @@
 import { Result } from '../core/result';
-import { Failure, InvalidCredentialsFailure, UnexpectedFailure } from '../failures';
+import { Failure, InvalidCredentialsFailure, NotFoundFailure, UnexpectedFailure } from '../failures';
 import {
   AuthUseCase,
   LoginInput,
   LoginOutput,
+  OfflineBundle,
   StoreLoginInput,
   StoreLoginOutput,
   VendedorLoginInput,
@@ -99,6 +100,36 @@ export class AuthUseCaseImpl implements AuthUseCase {
         .filter((user) => user.ativo && !!user.pinHash)
         .map((user) => ({ id: user.id, nome: user.nome, papel: user.papel }));
       return Result.ok(paraLogin);
+    } catch (error) {
+      return Result.error(new UnexpectedFailure(error));
+    }
+  }
+
+  /**
+   * Pacote para o terminal gravar no computador da loja (cofre cifrado no painel).
+   * Permite codigo+senha e PIN sem rede, depois da primeira abertura online.
+   */
+  async getOfflineBundle(storeId: string): Promise<Result<OfflineBundle, Failure>> {
+    try {
+      const store = await this.storeRepository.findById(storeId);
+      if (!store || !store.loginHabilitado()) {
+        return Result.error(new NotFoundFailure('Loja', storeId));
+      }
+
+      const users = await this.userRepository.listByStore(storeId);
+      const comPin = users
+        .filter((user) => user.ativo && !!user.pinHash)
+        .map((user) => ({
+          id: user.id,
+          nome: user.nome,
+          papel: user.papel,
+          pinHash: user.pinHash!,
+        }));
+
+      return Result.ok({
+        store: { id: store.id, nome: store.nome, codigo: store.codigo },
+        users: comPin,
+      });
     } catch (error) {
       return Result.error(new UnexpectedFailure(error));
     }

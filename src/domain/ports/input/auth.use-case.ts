@@ -33,6 +33,22 @@ export interface VendedorSummary {
   papel: User['papel'];
 }
 
+export interface OfflineBundleUser {
+  id: string;
+  nome: string;
+  papel: User['papel'];
+  pinHash: string;
+}
+
+export interface OfflineBundle {
+  store: {
+    id: string;
+    nome: string;
+    codigo: string;
+  };
+  users: OfflineBundleUser[];
+}
+
 export interface VendedorLoginInput {
   storeId: string;
   userId: string;
@@ -47,6 +63,7 @@ export interface AuthUseCase {
   login(input: LoginInput): Promise<Result<LoginOutput, Failure>>;
   loginStore(input: StoreLoginInput): Promise<Result<StoreLoginOutput, Failure>>;
   listVendedoresParaLogin(storeId: string): Promise<Result<VendedorSummary[], Failure>>;
+  getOfflineBundle(storeId: string): Promise<Result<OfflineBundle, Failure>>;
   loginVendedor(input: VendedorLoginInput): Promise<Result<LoginOutput, Failure>>;
 }
 

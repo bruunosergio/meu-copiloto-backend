@@ -191,6 +191,27 @@ describe('AuthUseCaseImpl', () => {
       expect(result.value).toHaveLength(2);
       expect(result.value.map((u) => u.nome).sort()).toEqual(['Gerente Ativo', 'Vendedor Ativo']);
     });
+
+    it('offline bundle inclui pinHash so de quem tem PIN ativo', async () => {
+      await userRepository.create({
+        storeId,
+        nome: 'Vendedor Offline',
+        email: null,
+        senhaHash: null,
+        usuario: 'vendedor.offline',
+        pinHash: await passwordHasher.hash('1234'),
+        telefoneWhatsapp: null,
+        papel: Role.VENDEDOR,
+      });
+
+      const result = await useCase.getOfflineBundle(storeId);
+
+      expect(result.isOk).toBe(true);
+      expect(result.value.store.codigo).toBe('loja-piloto');
+      expect(result.value.users).toHaveLength(1);
+      expect(result.value.users[0].pinHash).toBeDefined();
+      expect(result.value.users[0].nome).toBe('Vendedor Offline');
+    });
   });
 
   describe('loginVendedor', () => {

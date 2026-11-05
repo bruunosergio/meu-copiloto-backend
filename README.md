@@ -80,6 +80,7 @@ Autenticação do dia a dia é única para todos os papéis — ver [ADR-0010](d
 | POST | `/auth/login` | — | Emergência/legado: `{ email, senha }` → `{ token, user }` (só quem ainda tem e-mail+senha) |
 | POST | `/auth/loja/login` | — | Passo 1: `{ codigo, senha }` da loja → `{ storeToken, store }` |
 | GET | `/auth/loja/vendedores` | storeToken | Passo 2: lista `{ id, nome, papel }` dos usuários ativos com PIN |
+| GET | `/auth/loja/offline-bundle` | storeToken | Pacote para o terminal gravar no PC (PIN offline após a 1ª abertura) |
 | POST | `/auth/loja/vendedor-login` | storeToken | Passo 3: `{ userId, pin }` → `{ token, user }` (JWT curto só para VENDEDOR) |
 
 | Método | Rota | Papel exigido | Descrição |
