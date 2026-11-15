@@ -4,5 +4,6 @@ export * from './fake-shortage.repository';
 export * from './fake-distribuidora.repository';
 export * from './fake-emprestimo.repository';
 export * from './fake-tarefa.repository';
+export * from './fake-cobranca.repository';
 export * from './fake-password-hasher';
 export * from './fake-token-provider';

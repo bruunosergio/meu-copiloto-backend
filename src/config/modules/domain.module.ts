@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { InfraModule } from './infra.module';
 import {
+  COBRANCA_REPOSITORY,
+  CobrancaRepository,
   DISTRIBUIDORA_REPOSITORY,
   DistribuidoraRepository,
   EMPRESTIMO_REPOSITORY,
@@ -21,6 +23,7 @@ import {
 } from '../../domain/ports/output';
 import {
   AUTH_USE_CASE,
+  COBRANCA_USE_CASE,
   DISTRIBUIDORA_USE_CASE,
   EMPRESTIMO_USE_CASE,
   SHORTAGE_USE_CASE,
@@ -29,6 +32,7 @@ import {
 } from '../../domain/ports/input';
 import {
   AuthUseCaseImpl,
+  CobrancaUseCaseImpl,
   DistribuidoraUseCaseImpl,
   EmprestimoUseCaseImpl,
   ShortageUseCaseImpl,
@@ -98,6 +102,12 @@ import {
       useFactory: (tarefaRepository: TarefaRepository) => new TarefaUseCaseImpl(tarefaRepository),
       inject: [TAREFA_REPOSITORY],
     },
+    {
+      provide: COBRANCA_USE_CASE,
+      useFactory: (cobrancaRepository: CobrancaRepository, storeRepository: StoreRepository) =>
+        new CobrancaUseCaseImpl(cobrancaRepository, storeRepository),
+      inject: [COBRANCA_REPOSITORY, STORE_REPOSITORY],
+    },
   ],
   exports: [
     AUTH_USE_CASE,
@@ -106,6 +116,7 @@ import {
     DISTRIBUIDORA_USE_CASE,
     EMPRESTIMO_USE_CASE,
     TAREFA_USE_CASE,
+    COBRANCA_USE_CASE,
   ],
 })
 export class DomainModule {}

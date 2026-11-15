@@ -4,3 +4,4 @@ export * from './shortage.use-case';
 export * from './distribuidora.use-case';
 export * from './emprestimo.use-case';
 export * from './tarefa.use-case';
+export * from './cobranca.use-case';

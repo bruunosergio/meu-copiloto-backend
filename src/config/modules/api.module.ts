@@ -7,6 +7,7 @@ import { ShortagesController } from '../../api/rest/shortages/shortages.controll
 import { DistribuidorasController } from '../../api/rest/distribuidoras/distribuidoras.controller';
 import { EmprestimosController } from '../../api/rest/emprestimos/emprestimos.controller';
 import { TarefasController } from '../../api/rest/tarefas/tarefas.controller';
+import { CobrancasController } from '../../api/rest/cobrancas/cobrancas.controller';
 import { HealthController } from '../../api/rest/health/health.controller';
 
 @Module({
@@ -18,6 +19,7 @@ import { HealthController } from '../../api/rest/health/health.controller';
     DistribuidorasController,
     EmprestimosController,
     TarefasController,
+    CobrancasController,
     HealthController,
   ],
 })

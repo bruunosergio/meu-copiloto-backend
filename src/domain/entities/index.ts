@@ -7,3 +7,4 @@ export * from './distribuidora';
 export * from './emprestimo';
 export * from './sprint';
 export * from './tarefa';
+export * from './cobranca';

@@ -37,6 +37,24 @@ enum TarefaStatus {
   CONCLUIDA
 }
 
+enum CobrancaStatus {
+  A_COBRAR
+  MENSAGEM
+  PROMETEU
+  SEM_RESPOSTA
+  PAGO_PIX
+  PAGO_CARTAO
+  PAGO_DINHEIRO
+  PAGO
+  NAO_COBRAR
+}
+
+enum CobrancaAtencao {
+  INTERNO
+  PREFEITURA
+  BALCAO
+}
+
 enum ShortageOrigin {
   WEB
   WHATSAPP_AUDIO
@@ -58,8 +76,12 @@ model Store {
   shortages      Shortage[]
   distribuidoras Distribuidora[]
   emprestimos    Emprestimo[]
-  sprints        Sprint[]
-  tarefas        Tarefa[]
+  sprints              Sprint[]
+  tarefas              Tarefa[]
+  cobrancaRelatorio    CobrancaRelatorio?
+  cobrancaConfig       CobrancaConfig?
+  cobrancaAcompanhamentos CobrancaAcompanhamento[]
+  cobrancaRegras       CobrancaRegra[]
 
   @@map("stores")
 }
@@ -197,6 +219,61 @@ model Tarefa {
 
   @@index([storeId, sprintId])
   @@map("tarefas")
+}
+
+// Snapshot do PDF "Recebiveis em Aberto por Cliente" (Shop Control). Um por loja:
+// cada importacao substitui o JSON. Fone/status ficam em CobrancaAcompanhamento.
+model CobrancaRelatorio {
+  id             String   @id @default(uuid())
+  storeId        String   @unique @map("store_id")
+  store          Store    @relation(fields: [storeId], references: [id])
+  referencia     String
+  fonte          String   @default("Recebíveis em aberto por cliente")
+  clientes       Json
+  importadoEm    DateTime @default(now()) @map("importado_em")
+  importadoPorId String   @map("importado_por_id")
+
+  @@map("cobranca_relatorios")
+}
+
+model CobrancaConfig {
+  id           String   @id @default(uuid())
+  storeId      String   @unique @map("store_id")
+  store        Store    @relation(fields: [storeId], references: [id])
+  dddPadrao    String   @default("82") @map("ddd_padrao")
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("cobranca_configs")
+}
+
+model CobrancaAcompanhamento {
+  id               String         @id @default(uuid())
+  storeId          String         @map("store_id")
+  store            Store          @relation(fields: [storeId], references: [id])
+  codigo           String
+  telefoneOverride String?        @map("telefone_override")
+  status           CobrancaStatus @default(A_COBRAR)
+  promessa         String?
+  anotacao         String?
+  atualizadoEm     DateTime       @updatedAt @map("atualizado_em")
+
+  @@unique([storeId, codigo])
+  @@index([storeId])
+  @@map("cobranca_acompanhamentos")
+}
+
+model CobrancaRegra {
+  id             String          @id @default(uuid())
+  storeId        String          @map("store_id")
+  store          Store           @relation(fields: [storeId], references: [id])
+  tipo           CobrancaAtencao
+  codigoCliente  String?         @map("codigo_cliente")
+  nomeContem     String?         @map("nome_contem")
+  criadoEm       DateTime        @default(now()) @map("criado_em")
+
+  @@index([storeId])
+  @@map("cobranca_regras")
 }
 
 model StatusTransition {

@@ -102,6 +102,11 @@ Autenticação do dia a dia é única para todos os papéis — ver [ADR-0010](d
 | PATCH | `/emprestimos/devolver` | qualquer autenticado | Marca empréstimos como devolvidos (`ids`, `devolvidoPara`) |
 | GET/POST | `/tarefas`, `/tarefas/sprints` | ADMIN/GERENTE | Quadro de tarefas e sprints |
 | PATCH/DELETE | `/tarefas/:id`, `/tarefas/sprints/:id/encerrar` | ADMIN/GERENTE | Atualiza/exclui tarefa; encerra sprint |
+| GET | `/cobrancas` | ADMIN/GERENTE | Painel da carteira (PDF Shop Control + andamento por cliente) |
+| POST | `/cobrancas/importar` | ADMIN/GERENTE | Substitui o snapshot do relatório (`referencia`, `clientes`) |
+| PATCH | `/cobrancas/clientes/:codigo` | ADMIN/GERENTE | Telefone, status, promessa e anotação |
+| PATCH | `/cobrancas/config` | ADMIN/GERENTE | DDD padrão da loja (`dddPadrao`) |
+| POST/DELETE | `/cobrancas/regras`, `/cobrancas/regras/:id` | ADMIN/GERENTE | Exceções (interno, prefeitura, balcão) |
 | GET | `/distribuidoras` | qualquer autenticado | Lista distribuidoras da loja (ativas e inativas) |
 | POST | `/distribuidoras` | ADMIN | Cadastra distribuidora (`nome`) |
 | PATCH | `/distribuidoras/:id/deactivate` | ADMIN | Desativa (some do seletor rápido, mantém histórico) |
