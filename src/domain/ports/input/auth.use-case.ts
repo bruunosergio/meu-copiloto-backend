@@ -3,7 +3,6 @@ import { Failure } from '../../failures';
 import { User } from '../../entities';
 
 export interface LoginInput {
-  storeId: string;
   email: string;
   senha: string;
 }

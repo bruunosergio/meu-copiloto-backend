@@ -17,6 +17,10 @@ export class FakeUserRepository implements UserRepository {
     return this.users.find((u) => u.storeId === storeId && u.email === email) ?? null;
   }
 
+  async findAllByEmail(email: string): Promise<User[]> {
+    return this.users.filter((u) => u.email === email);
+  }
+
   async findByUsuario(storeId: string, usuario: string): Promise<User | null> {
     return this.users.find((u) => u.storeId === storeId && u.usuario === usuario) ?? null;
   }

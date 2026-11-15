@@ -12,6 +12,7 @@ build/
 .env
 .env.*
 !.env.example
+prisma/onboard-creds/
 
 # Logs
 *.log

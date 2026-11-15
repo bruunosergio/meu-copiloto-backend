@@ -1,5 +1,4 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, UseGuards } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AUTH_USE_CASE, AuthUseCase } from '../../../domain/ports/input';
 import { CurrentStoreSession, StoreSession, StoreSessionGuard } from '../../guards';
 import { unwrapOrThrow } from '../result-http.helper';
@@ -8,27 +7,18 @@ import { StoreLoginDto } from './store-login.dto';
 import { VendedorLoginDto } from './vendedor-login.dto';
 
 /**
- * MVP de uma unica loja: o storeId da loja piloto e resolvido no seed
- * e injetado aqui via variavel de ambiente ate existir tela de selecao de loja (Fase 4).
- *
- * Dois fluxos de autenticacao (ver ADR-0007):
- * - /auth/login: ADMIN/COMPRADOR, e-mail+senha, de qualquer lugar.
- * - /auth/loja/*: terminal compartilhado da loja -> escolha do vendedor -> PIN.
+ * Dois fluxos de autenticacao (ver ADR-0010):
+ * - /auth/login: emergencia e-mail+senha; a loja sai do usuario, nao de DEFAULT_STORE_ID.
+ * - /auth/loja/*: terminal compartilhado da loja -> nome -> PIN.
  */
 @Controller('auth')
 export class AuthController {
-  constructor(
-    @Inject(AUTH_USE_CASE) private readonly authUseCase: AuthUseCase,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(@Inject(AUTH_USE_CASE) private readonly authUseCase: AuthUseCase) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
-    const storeId = this.configService.get<string>('DEFAULT_STORE_ID', 'loja-piloto');
-
     const result = await this.authUseCase.login({
-      storeId,
       email: dto.email,
       senha: dto.senha,
     });

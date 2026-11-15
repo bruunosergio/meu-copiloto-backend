@@ -24,6 +24,11 @@ export class PrismaUserRepository implements UserRepository {
     return raw ? UserMapper.toDomain(raw) : null;
   }
 
+  async findAllByEmail(email: string): Promise<User[]> {
+    const raws = await this.prisma.user.findMany({ where: { email } });
+    return raws.map(UserMapper.toDomain);
+  }
+
   async findByUsuario(storeId: string, usuario: string): Promise<User | null> {
     const raw = await this.prisma.user.findUnique({
       where: { storeId_usuario: { storeId, usuario } },

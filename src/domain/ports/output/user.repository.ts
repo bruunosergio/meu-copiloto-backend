@@ -25,6 +25,7 @@ export interface UpdateUserData {
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(storeId: string, email: string): Promise<User | null>;
+  findAllByEmail(email: string): Promise<User[]>;
   findByUsuario(storeId: string, usuario: string): Promise<User | null>;
   findByPhone(telefoneWhatsapp: string): Promise<User | null>;
   listByStore(storeId: string): Promise<User[]>;

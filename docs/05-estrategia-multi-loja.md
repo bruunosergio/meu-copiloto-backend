@@ -19,10 +19,10 @@ O terreno já foi preparado na Fase 0: **toda entidade carrega `store_id` desde 
 
 ## 2. O que separa a Fase 1 do multi-tenant real
 
-A Fase 1 tem um único atalho consciente que amarra o sistema a uma loja: o login resolve o usuário dentro do `DEFAULT_STORE_ID` fixo (a loja-piloto). Para operar a segunda loja em diante:
+O login de emergência (`/auth/login`) resolve a loja pelo e-mail do usuário — não usa mais `DEFAULT_STORE_ID`. O terminal já isolava pelo código da loja. Para operar a segunda loja em diante:
 
-1. **Login resolve a loja pelo usuário** — o e-mail já é único por loja e o JWT já carrega `storeId`; trata-se de remover o atalho, não de redesenhar.
-2. **Rotina de onboarding de loja** — criar loja + admin inicial + distribuidoras iniciais (hoje é o papel do seed; vira operação de cadastro do dono do produto).
+1. **Login de emergência pela identidade** — feito: o JWT continua carregando o `storeId` do usuário.
+2. **Rotina de onboarding de loja** — script `npm run onboard:agreste` (loja + usuários + distribuidoras); o seed da piloto permanece separado.
 3. **Auditoria de isolamento** — revisar que toda query filtra por `store_id` de ponta a ponta (a maior parte já filtra; é revisão, não reescrita).
 
 **Gatilho:** este trabalho deve estar pronto **antes de fechar a segunda loja**. Feito antes, é pequeno e sem pressa; feito depois, é dor de cabeça com dados reais em produção.
@@ -52,7 +52,7 @@ Tudo que varia de loja para loja mora no banco, vinculado ao `store_id` — nunc
 ## 5. Sequência recomendada
 
 1. **Agora:** operar a loja piloto como está; o uso real dita as prioridades.
-2. **Antes da 2ª loja:** remover `DEFAULT_STORE_ID` do login + onboarding de loja + auditoria de isolamento (itens da seção 2).
+2. **Antes da 2ª loja:** onboarding de loja (script) + auditoria de isolamento. Login de emergência já resolve a loja pelo e-mail.
 3. **Na 1ª venda:** domínio próprio, planos pagos, backup verificado.
 4. **Ao bater o martelo técnico do multi-tenant:** registrar em ADR próprio (banco compartilhado vs. schema por loja vs. banco por loja — a recomendação atual é banco compartilhado com `store_id`, o mais simples que atende).
 

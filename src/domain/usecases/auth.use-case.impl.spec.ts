@@ -60,7 +60,7 @@ describe('AuthUseCaseImpl', () => {
 
   describe('login (ADMIN/COMPRADOR)', () => {
     it('autentica com credenciais corretas e devolve um token', async () => {
-      const result = await useCase.login({ storeId, email: 'admin@loja.com', senha: 'senha-correta' });
+      const result = await useCase.login({ email: 'admin@loja.com', senha: 'senha-correta' });
 
       expect(result.isOk).toBe(true);
       expect(result.value.token).toBeDefined();
@@ -68,14 +68,14 @@ describe('AuthUseCaseImpl', () => {
     });
 
     it('rejeita senha incorreta', async () => {
-      const result = await useCase.login({ storeId, email: 'admin@loja.com', senha: 'senha-errada' });
+      const result = await useCase.login({ email: 'admin@loja.com', senha: 'senha-errada' });
 
       expect(result.isErr).toBe(true);
       expect(result.error).toBeInstanceOf(InvalidCredentialsFailure);
     });
 
     it('rejeita e-mail inexistente', async () => {
-      const result = await useCase.login({ storeId, email: 'ninguem@loja.com', senha: 'qualquer' });
+      const result = await useCase.login({ email: 'ninguem@loja.com', senha: 'qualquer' });
 
       expect(result.isErr).toBe(true);
       expect(result.error).toBeInstanceOf(InvalidCredentialsFailure);
@@ -99,10 +99,34 @@ describe('AuthUseCaseImpl', () => {
         }),
       );
 
-      const result = await useCase.login({ storeId, email: 'inativo@loja.com', senha: 'senha-correta' });
+      const result = await useCase.login({ email: 'inativo@loja.com', senha: 'senha-correta' });
 
       expect(result.isErr).toBe(true);
       expect(result.error).toBeInstanceOf(InvalidCredentialsFailure);
+    });
+
+    it('resolve a loja pelo e-mail, sem DEFAULT_STORE_ID', async () => {
+      userRepository.seed(
+        new User({
+          id: 'user-agreste',
+          storeId: 'store-agreste',
+          nome: 'Thiago',
+          email: 'thiago@agreste.com',
+          senhaHash: await passwordHasher.hash('senha-correta'),
+          usuario: 'thiago',
+          pinHash: 'hash',
+          telefoneWhatsapp: null,
+          papel: Role.ADMIN,
+          ativo: true,
+          criadoEm: new Date(),
+          atualizadoEm: new Date(),
+        }),
+      );
+
+      const result = await useCase.login({ email: 'thiago@agreste.com', senha: 'senha-correta' });
+
+      expect(result.isOk).toBe(true);
+      expect(result.value.user.storeId).toBe('store-agreste');
     });
   });
 

@@ -37,20 +37,21 @@ export class AuthUseCaseImpl implements AuthUseCase {
     private readonly tokenConfig: AuthTokenConfig,
   ) {}
 
-  /** ADMIN/COMPRADOR: e-mail+senha, de qualquer lugar. */
+  /** Acesso de emergencia: e-mail+senha. A loja sai do cadastro, nao de DEFAULT_STORE_ID. */
   async login(input: LoginInput): Promise<Result<LoginOutput, Failure>> {
     try {
-      const user = await this.userRepository.findByEmail(input.storeId, input.email);
-
-      if (!user || !user.ativo) {
+      const candidatos = await this.userRepository.findAllByEmail(input.email);
+      const aceitos: typeof candidatos = [];
+      for (const candidato of candidatos) {
+        if (!candidato.ativo || !candidato.senhaHash) continue;
+        if (await this.passwordHasher.compare(input.senha, candidato.senhaHash)) {
+          aceitos.push(candidato);
+        }
+      }
+      if (aceitos.length !== 1) {
         return Result.error(new InvalidCredentialsFailure());
       }
-
-      const senhaValida =
-        !!user.senhaHash && (await this.passwordHasher.compare(input.senha, user.senhaHash));
-      if (!senhaValida) {
-        return Result.error(new InvalidCredentialsFailure());
-      }
+      const user = aceitos[0];
 
       const token = this.tokenProvider.sign({
         sub: user.id,
