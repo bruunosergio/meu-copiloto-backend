@@ -1,8 +1,11 @@
 # Meu Copiloto — Backend
 
-Assistente digital de reposição de estoque para varejo (primeiro segmento: autopeças). Substitui o caderno físico de faltas: o vendedor registra por **texto ou áudio no WhatsApp**, o sistema interpreta e confirma os dados, e o comprador trabalha sobre uma fila organizada no painel web.
+API de reposição de estoque para varejo (piloto: autopeças). Substitui o caderno físico de faltas: o vendedor registra a demanda; o comprador trabalha numa fila com status e histórico.
 
-> **Status:** Fase 1 — núcleo sem IA. Autenticação, gestão de usuários e ciclo de vida das faltas implementados via API REST. WhatsApp/IA entram na Fase 2.
+> **Status:** Fase 1 em uso na operação — autenticação JWT, usuários e ciclo de vida das faltas via REST.  
+> **Roadmap (Fase 2):** captura por WhatsApp + interpretação (STT/LLM).
+
+**Autor:** [Bruno Sérgio](https://github.com/bruunosergio) · [Portfólio](https://bruno-portfolio-plum.vercel.app) · Painel: [`meu-copiloto-web`](https://github.com/bruunosergio/meu-copiloto-web)
 
 ## Documentação
 
